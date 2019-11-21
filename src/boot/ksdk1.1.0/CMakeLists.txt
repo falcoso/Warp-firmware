@@ -84,7 +84,7 @@ ELSEIF(CMAKE_BUILD_TYPE MATCHES Release)
 ENDIF()
 
 # ADD_EXECUTABLE
-ADD_EXECUTABLE(Warp 
+ADD_EXECUTABLE(Warp
     "${ProjDirPath}/../../../../platform/utilities/src/fsl_misc_utilities.c"
     "${ProjDirPath}/../../../../platform/startup/MKL03Z4/gcc/startup_MKL03Z4.S"
     "${ProjDirPath}/../../src/warp-kl03-ksdk1.1-boot.c"
@@ -102,6 +102,8 @@ ADD_EXECUTABLE(Warp
 #    "${ProjDirPath}/../../src/devSI4705.c"
     "${ProjDirPath}/../../src/devCCS811.c"
     "${ProjDirPath}/../../src/devAMG8834.c"
+    "${ProjDirPath}/../../src/devSSD1331.c"
+    "${ProjDirPath}/../../src/devSSD1331.h"
 #    "${ProjDirPath}/../../src/devRV8803C7.c"
 #    "${ProjDirPath}/../../src/devPAN1326.c"
 #    "${ProjDirPath}/../../src/devAS7262.c"

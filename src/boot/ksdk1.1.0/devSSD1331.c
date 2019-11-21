@@ -155,9 +155,25 @@ devSSD1331init(void)
 	/*
 	 *	Any post-initialization drawing commands go here.
 	 */
-	//...
 
+	// make sure overall current is at maximum
+    writeCommand(kSSD1331CommandMASTERCURRENT);
+	writeCommand(0x0F);
 
+	writeCommand(kSSD1331CommandCONTRASTB);
+	writeCommand(0xFF);
+
+	writeCommand(kSSD1331CommandDRAWRECT);
+	writeCommand(0x00); //top right pixel
+	writeCommand(0x00); //top right pixel
+	writeCommand(0x5F); //bottom left pixel
+	writeCommand(0x3F); //bottom left pixel
+	writeCommand(0x00);
+	writeCommand(0x3F); //max green border
+	writeCommand(0x00);
+	writeCommand(0x00);
+	writeCommand(0x3F); //max green fill
+	writeCommand(0x00);
 
 	return 0;
 }

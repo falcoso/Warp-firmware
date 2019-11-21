@@ -1,5 +1,5 @@
 #!/bin/sh
-	
+
 	# Uncomment this to set ARMGCC_DIR correctly: export ARMGCC_DIR=<full path to arm-gcc directory>
 
 	mkdir -p work
@@ -25,6 +25,7 @@
 	cp ../../src/boot/ksdk1.1.0/devSI4705.*				work/demos/Warp/src/
 	cp ../../src/boot/ksdk1.1.0/devCCS811.*				work/demos/Warp/src/
 	cp ../../src/boot/ksdk1.1.0/devAMG8834.*			work/demos/Warp/src/
+	cp ../../src/boot/ksdk1.1.0/devSSD1331.*			work/demos/Warp/src/
 	cp ../../src/boot/ksdk1.1.0/devAS7262.*				work/demos/Warp/src/
 	cp ../../src/boot/ksdk1.1.0/devAS7263.*				work/demos/Warp/src/
 	cp ../../src/boot/ksdk1.1.0/devAS726x.*				work/demos/Warp/src/
@@ -38,4 +39,3 @@
 	cd work/lib/ksdk_platform_lib/armgcc/KL03Z4 && ./clean.sh; ./build_release.sh
 	cd ../../../../demos/Warp/armgcc/Warp && ./clean.sh; ./build_release.sh
 	echo "\n\nNow, run\n\n\t/Applications/SEGGER/JLink/JLinkExe -device MKL03Z32XXX4 -if SWD -speed 100000 -CommanderScript ../../tools/scripts/jlink.commands\n\n"
-
