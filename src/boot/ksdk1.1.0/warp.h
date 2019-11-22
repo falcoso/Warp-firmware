@@ -33,16 +33,18 @@ typedef enum
 	kWarpTypeMaskLambda570Y		= (1 << 19),
 	kWarpTypeMaskLambda600O		= (1 << 20),
 	kWarpTypeMaskLambda650R		= (1 << 21),
-	
+
 	kWarpTypeMaskLambda610R		= (1 << 22),
 	kWarpTypeMaskLambda680S		= (1 << 23),
 	kWarpTypeMaskLambda730T		= (1 << 24),
 	kWarpTypeMaskLambda760U		= (1 << 25),
 	kWarpTypeMaskLambda810V		= (1 << 26),
 	kWarpTypeMaskLambda860W		= (1 << 27),
-	
+
 	kWarpTypeMaskTotalVOC		= (1 << 28),
 	kWarpTypeMaskEquivalentCO2	= (1 << 29),
+
+	kWarpTypeMaskCurrent 		= (1 << 30),
 
 
 	/*
@@ -94,7 +96,7 @@ typedef enum
 	kWarpStatusBadDeviceCommand,
 
 	/*
-	 *	Generic comms error 
+	 *	Generic comms error
 	 */
 	kWarpStatusCommsError,
 
@@ -155,6 +157,7 @@ typedef enum
 	kWarpSensorAS7262,
 	kWarpSensorAS7263,
 	kWarpSensorSCD30,
+	kWarpSensorINA219
 } WarpSensorDevice;
 
 typedef enum
@@ -183,6 +186,10 @@ typedef enum
 {
 	kWarpSensorConfigurationRegisterMMA8451QF_SETUP			= 0x09,
 	kWarpSensorConfigurationRegisterMMA8451QCTRL_REG1		= 0x2A,
+
+	//TODO need to change this later
+	kWarpSensorConfigurationRegisterINA219F_SETUP			= 0x00,
+	kWarpSensorConfigurationRegisterINA219F_CALIB			= 0x05,
 
 	kWarpSensorConfigurationRegisterMAG3110CTRL_REG1		= 0x10,
 	kWarpSensorConfigurationRegisterMAG3110CTRL_REG2		= 0x11,
@@ -233,6 +240,12 @@ typedef enum
 	kWarpSensorOutputRegisterMMA8451QOUT_Y_LSB			= 0x04,
 	kWarpSensorOutputRegisterMMA8451QOUT_Z_MSB			= 0x05,
 	kWarpSensorOutputRegisterMMA8451QOUT_Z_LSB			= 0x06,
+
+	kWarpSensorOutputRegisterINA219OUT_SHUNT_V			= 0x01,
+	kWarpSensorOutputRegisterINA219OUT_BUS_V			= 0x02,
+	kWarpSensorOutputRegisterINA219OUT_POWER			= 0x03,
+	kWarpSensorOutputRegisterINA219OUT_CURRENT			= 0x04,
+	kWarpSensorOutputRegisterINA219OUT_CALIBRATION		= 0x05,
 
 	kWarpSensorOutputRegisterMAG3110OUT_X_MSB			= 0x01,
 	kWarpSensorOutputRegisterMAG3110OUT_X_LSB			= 0x02,

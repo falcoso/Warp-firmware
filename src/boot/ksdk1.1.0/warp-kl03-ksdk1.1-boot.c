@@ -62,6 +62,8 @@
 /*
 *	Comment out the header file to disable devices
 */
+#include "devINA219.h"
+
 #ifndef WARP_FRDMKL03
 #	include "devBMX055.h"
 #	include "devMMA8451Q.h"
@@ -71,6 +73,7 @@
 #	include "devBME680.h"
 #	include "devCCS811.h"
 #	include "devAMG8834.h"
+
 //#include "devTCS34725.h"
 //#include "devSI4705.h"
 //#include "devSI7021.h"
@@ -99,6 +102,7 @@
 #define						kWarpConstantStringErrorSanity		"\rSanity check failed!"
 
 
+volatile WarpI2CDeviceState			deviceINA219State;
 #ifdef WARP_BUILD_ENABLE_DEVADXL362
 volatile WarpSPIDeviceState			deviceADXL362State;
 #endif
@@ -170,6 +174,20 @@ volatile WarpI2CDeviceState			deviceAS7263State;
 #ifdef WARP_BUILD_ENABLE_DEVRV8803C7
 volatile WarpI2CDeviceState			deviceRV8803C7State;
 #endif
+
+WarpStatus setupINA219(){
+	WarpStatus	i2cWriteStatus1, i2cWriteStatus2;
+
+	// i2cWriteStatus1 = writeSensorRegisterINA219(kWarpSensorConfigurationRegisterINA219F_SETUP /* register address F_SETUP */,
+	// 						0x399F /* payload: Disable FIFO */,
+	// 						1);
+
+	i2cWriteStatus1 = writeSensorRegisterINA219(kWarpSensorConfigurationRegisterINA219F_CALIB /* register address F_SETUP */,
+							0x0001 /* payload: Disable FIFO */,
+							1);
+
+	return i2cWriteStatus1;
+};
 
 /*
  *	TODO: move this and possibly others into a global structure
@@ -1236,6 +1254,10 @@ main(void)
 	initBMX055mag(	0x10	/* i2cAddress */,	&deviceBMX055magState	);
 #endif
 
+// #ifdef WARP_BUILD_ENABLE_DEVINA219
+	initINA219(0x40, &deviceINA219State);
+// #endif
+
 #ifdef WARP_BUILD_ENABLE_DEVMMA8451Q
 	initMMA8451Q(	0x1D	/* i2cAddress */,	&deviceMMA8451QState	);
 #endif
@@ -1344,6 +1366,7 @@ main(void)
 
 	// initialise screen
 	devSSD1331init();
+	// setupINA219();
 	while (1)
 	{
 		/*
@@ -1575,6 +1598,8 @@ main(void)
 #endif
 				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 
+				SEGGER_RTT_WriteString(0, "\r\t- 'l' INA219\n");
+
 				SEGGER_RTT_WriteString(0, "\r\tEnter selection> ");
 				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 
@@ -1726,6 +1751,12 @@ main(void)
 						break;
 					}
 #endif
+					case 'l':
+					{
+						menuTargetSensor = kWarpSensorINA219;
+						menuI2cDevice = &deviceINA219State;
+						break;
+					}
 					default:
 					{
 #ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
@@ -2730,7 +2761,7 @@ loopForSensor(	const char *  tagString,
 	{
 		for (int i = 0; i < readCount; i++) for (int j = 0; j < chunkReadsPerAddress; j++)
 		{
-			status = readSensorRegisterFunction(address+j, 1 /* numberOfBytes */);
+			status = readSensorRegisterFunction(address+j, 2 /* numberOfBytes */);
 			if (status == kWarpStatusOK)
 			{
 				nSuccesses++;
@@ -2768,9 +2799,10 @@ loopForSensor(	const char *  tagString,
 					if (chatty)
 					{
 #ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
-						SEGGER_RTT_printf(0, "\r\t0x%02x --> 0x%02x\n",
+						SEGGER_RTT_printf(0, "\r\t0x%02x --> 0x%02x%02x\n",
 							address+j,
-							i2cDeviceState->i2cBuffer[0]);
+							i2cDeviceState->i2cBuffer[0],
+							i2cDeviceState->i2cBuffer[1]);
 #endif
 					}
 				}
@@ -2899,6 +2931,29 @@ repeatRegisterReadForDeviceAndAddress(WarpSensorDevice warpSensorDevice, uint8_t
 #endif
 			break;
 		}
+
+		case kWarpSensorINA219:
+		{
+			loopForSensor(	"\r\nINA219:\n\r",		/*	tagString			*/
+					&readSensorRegisterINA219,	/*	readSensorRegisterFunction	*/
+					&deviceINA219State,		/*	i2cDeviceState			*/
+					NULL,				/*	spiDeviceState			*/
+					baseAddress,			/*	baseAddress			*/
+					0x00,				/*	minAddress			*/
+					0x05,				/*	maxAddress			*/
+					repetitionsPerAddress,		/*	repetitionsPerAddress		*/
+					chunkReadsPerAddress,		/*	chunkReadsPerAddress		*/
+					spinDelay,			/*	spinDelay			*/
+					autoIncrement,			/*	autoIncrement			*/
+					sssupplyMillivolts,		/*	sssupplyMillivolts		*/
+					referenceByte,			/*	referenceByte			*/
+					adaptiveSssupplyMaxMillivolts,	/*	adaptiveSssupplyMaxMillivolts	*/
+					chatty				/*	chatty				*/
+					);
+			break;
+		}
+
+
 
 		case kWarpSensorBME680:
 		{

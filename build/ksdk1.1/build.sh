@@ -15,6 +15,7 @@
 	cp ../../src/boot/ksdk1.1.0/devBMX055.*				work/demos/Warp/src/
 	cp ../../src/boot/ksdk1.1.0/devADXL362.*			work/demos/Warp/src/
 	cp ../../src/boot/ksdk1.1.0/devMMA8451Q.*			work/demos/Warp/src/
+	cp ../../src/boot/ksdk1.1.0/devINA219.*			work/demos/Warp/src/
 	cp ../../src/boot/ksdk1.1.0/devLPS25H.*				work/demos/Warp/src/
 	cp ../../src/boot/ksdk1.1.0/devHDC1000.*			work/demos/Warp/src/
 	cp ../../src/boot/ksdk1.1.0/devMAG3110.*			work/demos/Warp/src/
