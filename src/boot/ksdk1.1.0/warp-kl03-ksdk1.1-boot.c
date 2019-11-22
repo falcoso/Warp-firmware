@@ -182,9 +182,9 @@ WarpStatus setupINA219(){
 	// 						0x399F /* payload: Disable FIFO */,
 	// 						1);
 
-	i2cWriteStatus1 = writeSensorRegisterINA219(kWarpSensorConfigurationRegisterINA219F_CALIB /* register address F_SETUP */,
-							0x0001 /* payload: Disable FIFO */,
-							1);
+	// i2cWriteStatus1 = writeSensorRegisterINA219(0x05,
+	// 						0x05,
+	// 						menuI2cPullupValue);
 
 	return i2cWriteStatus1;
 };
@@ -1367,6 +1367,8 @@ main(void)
 	// initialise screen
 	devSSD1331init();
 	// setupINA219();
+	enableI2Cpins(menuI2cPullupValue);
+	writeSensorRegisterINA219(0x05, 0xFFFF, menuI2cPullupValue);
 	while (1)
 	{
 		/*
