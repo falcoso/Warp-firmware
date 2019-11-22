@@ -59,9 +59,6 @@
 
 #define WARP_FRDMKL03
 
-/*
-*	Comment out the header file to disable devices
-*/
 #include "devINA219.h"
 #include "devMMA8451Q.h"
 
@@ -74,18 +71,12 @@
 volatile WarpI2CDeviceState			deviceINA219State;
 volatile WarpI2CDeviceState			deviceMMA8451QState;
 
-/*
- *	TODO: move this and possibly others into a global structure
- */
 volatile i2c_master_state_t			i2cMasterState;
 volatile spi_master_state_t			spiMasterState;
 volatile spi_master_user_config_t		spiUserConfig;
 volatile lpuart_user_config_t 			lpuartUserConfig;
 volatile lpuart_state_t 			lpuartState;
 
-/*
- *	TODO: move magic default numbers into constant definitions.
- */
 volatile uint32_t			gWarpI2cBaudRateKbps		= 200;
 volatile uint32_t			gWarpUartBaudRateKbps		= 1;
 volatile uint32_t			gWarpSpiBaudRateKbps		= 200;
@@ -120,26 +111,15 @@ int					read4digits(void);
 void					printAllSensors(bool printHeadersAndCalibration, bool hexModeFlag, int menuDelayBetweenEachRun, int i2cPullupValue);
 
 
-/*
- *	TODO: change the following to take byte arrays
- */
 WarpStatus				writeByteToI2cDeviceRegister(uint8_t i2cAddress, bool sendCommandByte, uint8_t commandByte, bool sendPayloadByte, uint8_t payloadByte);
 WarpStatus				writeBytesToSpi(uint8_t *  payloadBytes, int payloadLength);
-
 
 void					warpLowPowerSecondsSleep(uint32_t sleepSeconds, bool forceAllPinsIntoLowPowerState);
 
 
 
-/*
- *	From KSDK power_manager_demo.c <<BEGIN>>>
- */
-
 clock_manager_error_code_t clockManagerCallbackRoutine(clock_notify_struct_t *  notify, void *  callbackData);
 
-/*
- *	static clock callback table.
- */
 clock_manager_callback_user_config_t		clockManagerCallbackUserlevelStructure =
 									{
 										.callback	= clockManagerCallbackRoutine,
@@ -173,9 +153,7 @@ clockManagerCallbackRoutine(clock_notify_struct_t *  notify, void *  callbackDat
 }
 
 
-/*
- *	Override the RTC IRQ handler
- */
+// Override the RTC IRQ handler
 void
 RTC_IRQHandler(void)
 {
@@ -185,18 +163,14 @@ RTC_IRQHandler(void)
 	}
 }
 
-/*
- *	Override the RTC Second IRQ handler
- */
+// Override the RTC Second IRQ handler
 void
 RTC_Seconds_IRQHandler(void)
 {
 	gWarpSleeptimeSeconds++;
 }
 
-/*
- *	Power manager user callback
- */
+// Power manager user callback
 power_manager_error_code_t callback0(power_manager_notify_struct_t *  notify,
 					power_manager_callback_data_t *  dataPtr)
 {
@@ -224,24 +198,16 @@ power_manager_error_code_t callback0(power_manager_notify_struct_t *  notify,
  */
 
 
- void
- sleepUntilReset(void)
- {
- 	while (1)
- 	{
- #ifdef WARP_BUILD_ENABLE_DEVSI4705
- 		GPIO_DRV_SetPinOutput(kWarpPinSI4705_nRST);
- #endif
- 		warpLowPowerSecondsSleep(1, false /* forceAllPinsIntoLowPowerState */);
- #ifdef WARP_BUILD_ENABLE_DEVSI4705
- 		GPIO_DRV_ClearPinOutput(kWarpPinSI4705_nRST);
- #endif
- 		warpLowPowerSecondsSleep(60, true /* forceAllPinsIntoLowPowerState */);
- 	}
- }
+void sleepUntilReset(void)
+{
+	while (1)
+	{
+		warpLowPowerSecondsSleep(1, false /* forceAllPinsIntoLowPowerState */);
+		warpLowPowerSecondsSleep(60, true /* forceAllPinsIntoLowPowerState */);
+	}
+}
 
-void
-enableLPUARTpins(void)
+void enableLPUARTpins(void)
 {
 	/*	Enable UART CLOCK */
 	CLOCK_SYS_EnableLpuartClock(0);
@@ -251,10 +217,7 @@ enableLPUARTpins(void)
 	*	see page 99 in https://www.nxp.com/docs/en/reference-manual/KL03P24M48SF0RM.pdf
 	*/
 
-	/*
-	 *	Initialize LPUART0. See KSDK13APIRM.pdf section 40.4.3, page 1353
-	 *
-	 */
+	//	Initialize LPUART0. See KSDK13APIRM.pdf section 40.4.3, page 1353
 	lpuartUserConfig.baudRate = 115;
 	lpuartUserConfig.parityMode = kLpuartParityDisabled;
 	lpuartUserConfig.stopBitCount = kLpuartOneStopBit;
@@ -265,12 +228,9 @@ enableLPUARTpins(void)
 }
 
 
-void
-disableLPUARTpins(void)
+void disableLPUARTpins(void)
 {
-	/*
-	 *	LPUART deinit
-	 */
+	//	LPUART deinit
 	LPUART_DRV_Deinit(0);
 
 	/*	Warp KL03_UART_HCI_RX	--> PTB4 (GPIO)	*/
@@ -286,8 +246,7 @@ disableLPUARTpins(void)
 
 }
 
-void
-enableSPIpins(void)
+void enableSPIpins(void)
 {
 	CLOCK_SYS_EnableSpiClock(0);
 
@@ -301,10 +260,7 @@ enableSPIpins(void)
 	PORT_HAL_SetMuxMode(PORTB_BASE, 0, kPortMuxAlt3);
 
 
-	/*
-	 *	Initialize SPI master. See KSDK13APIRM.pdf Section 70.4
-	 *
-	 */
+	//	Initialize SPI master. See KSDK13APIRM.pdf Section 70.4
 	uint32_t			calculatedBaudRate;
 	spiUserConfig.polarity		= kSpiClockPolarity_ActiveHigh;
 	spiUserConfig.phase		= kSpiClockPhase_FirstEdge;
@@ -316,11 +272,9 @@ enableSPIpins(void)
 
 
 
-void
-disableSPIpins(void)
+void disableSPIpins(void)
 {
 	SPI_DRV_MasterDeinit(0);
-
 
 	/*	Warp KL03_SPI_MISO	--> PTA6	(GPI)		*/
 	PORT_HAL_SetMuxMode(PORTA_BASE, 6, kPortMuxAsGpio);
@@ -339,10 +293,7 @@ disableSPIpins(void)
 	CLOCK_SYS_DisableSpiClock(0);
 }
 
-
-
-void
-enableI2Cpins(uint16_t pullupValue)
+void enableI2Cpins(uint16_t pullupValue)
 {
 	CLOCK_SYS_EnableI2cClock(0);
 
@@ -354,8 +305,6 @@ enableI2Cpins(uint16_t pullupValue)
 
 
 	I2C_DRV_MasterInit(0 /* I2C instance */, (i2c_master_state_t *)&i2cMasterState);
-
-
 	/*
 	 *	TODO: need to implement config of the DCP
 	 */
@@ -364,8 +313,7 @@ enableI2Cpins(uint16_t pullupValue)
 
 
 
-void
-disableI2Cpins(void)
+void disableI2Cpins(void)
 {
 	I2C_DRV_MasterDeinit(0 /* I2C instance */);
 
@@ -382,9 +330,7 @@ disableI2Cpins(void)
 	 */
 	//...
 
-	/*
-	 *	Drive the I2C pins low
-	 */
+	//	Drive the I2C pins low
 	GPIO_DRV_ClearPinOutput(kWarpPinI2C0_SDA);
 	GPIO_DRV_ClearPinOutput(kWarpPinI2C0_SCL);
 
@@ -394,8 +340,7 @@ disableI2Cpins(void)
 
 
 // TODO: add pin states for pan1326 lp states
-void
-lowPowerPinStates(void)
+void lowPowerPinStates(void)
 {
 	/*
 	 *	Following Section 5 of "Power Management for Kinetis L Family" (AN5088.pdf),
@@ -404,21 +349,15 @@ lowPowerPinStates(void)
 	 *	deactivated (SI4705, PAN1326) also need '0'.
 	 */
 
-	/*
-	 *			PORT A
-	 */
-	/*
-	 *	For now, don't touch the PTA0/1/2 SWD pins. Revisit in the future.
-	 */
+	//			PORT A
+	//	For now, don't touch the PTA0/1/2 SWD pins. Revisit in the future.
 	/*
 	PORT_HAL_SetMuxMode(PORTA_BASE, 0, kPortMuxAsGpio);
 	PORT_HAL_SetMuxMode(PORTA_BASE, 1, kPortMuxAsGpio);
 	PORT_HAL_SetMuxMode(PORTA_BASE, 2, kPortMuxAsGpio);
 	*/
 
-	/*
-	 *	PTA3 and PTA4 are the EXTAL/XTAL
-	 */
+	//	PTA3 and PTA4 are the EXTAL/XTAL
 	PORT_HAL_SetMuxMode(PORTA_BASE, 3, kPortPinDisabled);
 	PORT_HAL_SetMuxMode(PORTA_BASE, 4, kPortPinDisabled);
 
@@ -428,17 +367,13 @@ lowPowerPinStates(void)
 	PORT_HAL_SetMuxMode(PORTA_BASE, 8, kPortMuxAsGpio);
 	PORT_HAL_SetMuxMode(PORTA_BASE, 9, kPortMuxAsGpio);
 
-	/*
-	 *	NOTE: The KL03 has no PTA10 or PTA11
-	 */
+	//	NOTE: The KL03 has no PTA10 or PTA11
 
 	PORT_HAL_SetMuxMode(PORTA_BASE, 12, kPortMuxAsGpio);
 
 
 
-	/*
-	 *			PORT B
-	 */
+	//			PORT B
 	PORT_HAL_SetMuxMode(PORTB_BASE, 0, kPortMuxAsGpio);
 
 	/*
@@ -471,30 +406,17 @@ lowPowerPinStates(void)
 	PORT_HAL_SetMuxMode(PORTB_BASE, 6, kPortMuxAsGpio);
 	PORT_HAL_SetMuxMode(PORTB_BASE, 7, kPortMuxAsGpio);
 
-	/*
-	 *	NOTE: The KL03 has no PTB8 or PTB9
-	 */
+	//	NOTE: The KL03 has no PTB8 or PTB9
 
 	PORT_HAL_SetMuxMode(PORTB_BASE, 10, kPortMuxAsGpio);
 	PORT_HAL_SetMuxMode(PORTB_BASE, 11, kPortMuxAsGpio);
 
-	/*
-	 *	NOTE: The KL03 has no PTB12
-	 */
+	//	NOTE: The KL03 has no PTB12
 
 	PORT_HAL_SetMuxMode(PORTB_BASE, 13, kPortMuxAsGpio);
 
-
-
-	/*
-	 *	Now, set all the pins (except kWarpPinKL03_VDD_ADC, the SWD pins, and the XTAL/EXTAL) to 0
-	 */
-
-
-
-	/*
-	 *	If we are in mode where we disable the ADC, then drive the pin high since it is tied to KL03_VDD
-	 */
+	//	Now, set all the pins (except kWarpPinKL03_VDD_ADC, the SWD pins, and the XTAL/EXTAL) to 0
+	//	If we are in mode where we disable the ADC, then drive the pin high since it is tied to KL03_VDD
 	if (gWarpMode & kWarpModeDisableAdcOnSleep)
 	{
 		GPIO_DRV_SetPinOutput(kWarpPinKL03_VDD_ADC);
@@ -508,81 +430,29 @@ lowPowerPinStates(void)
 	GPIO_DRV_ClearPinOutput(kWarpPinTS5A3154_IN);
 	GPIO_DRV_ClearPinOutput(kWarpPinSI4705_nRST);
 
-	/*
-	 *	Drive these chip selects high since they are active low:
-	 */
-
-	/*
-	 *	When the PAN1326 is installed, note that it has the
-	 *	following pull-up/down by default:
-	 *
-	 *		HCI_RX / kWarpPinI2C0_SCL	: pull up
-	 *		HCI_TX / kWarpPinI2C0_SDA	: pull up
-	 *		HCI_RTS / kWarpPinSPI_MISO	: pull up
-	 *		HCI_CTS / kWarpPinSPI_MOSI	: pull up
-	 *
-	 *	These I/Os are 8mA (see panasonic_PAN13xx.pdf, page 10),
-	 *	so we really don't want to be driving them low. We
-	 *	however also have to be careful of the I2C pullup and
-	 *	pull-up gating. However, driving them high leads to
-	 *	higher board power dissipation even when SSSUPPLY is off
-	 *	by ~80mW on board #003 (PAN1326 populated).
-	 *
-	 *	In revB board, with the ISL23415 DCP pullups, we also
-	 *	want I2C_SCL and I2C_SDA driven high since when we
-	 *	send a shutdown command to the DCP it will connect
-	 *	those lines to 25570_VOUT.
-	 *
-	 *	For now, we therefore leave the SPI pins low and the
-	 *	I2C pins (PTB3, PTB4, which are true open-drain) disabled.
-	 */
+	//	Drive these chip selects high since they are active low:
 
 	GPIO_DRV_ClearPinOutput(kWarpPinI2C0_SDA);
 	GPIO_DRV_ClearPinOutput(kWarpPinI2C0_SCL);
 	GPIO_DRV_ClearPinOutput(kWarpPinSPI_MOSI);
 	GPIO_DRV_ClearPinOutput(kWarpPinSPI_MISO);
 	GPIO_DRV_ClearPinOutput(kWarpPinSPI_SCK);
-
-	/*
-	 *	HCI_RX / kWarpPinI2C0_SCL is an input. Set it low.
-	 */
-	//GPIO_DRV_SetPinOutput(kWarpPinI2C0_SCL);
-
-	/*
-	 *	HCI_TX / kWarpPinI2C0_SDA is an output. Set it high.
-	 */
-	//GPIO_DRV_SetPinOutput(kWarpPinI2C0_SDA);
-
-	/*
-	 *	HCI_RTS / kWarpPinSPI_MISO is an output. Set it high.
-	 */
-	//GPIO_DRV_SetPinOutput(kWarpPinSPI_MISO);
-
-	/*
-	 *	From PAN1326 manual, page 10:
-	 *
-	 *		"When HCI_CTS is high, then CC256X is not allowed to send data to Host device"
-	 */
-	//GPIO_DRV_SetPinOutput(kWarpPinSPI_MOSI);
 }
 
 
 
-void
-disableTPS82740A(void)
+void disableTPS82740A(void)
 {
 	GPIO_DRV_ClearPinOutput(kWarpPinTPS82740A_CTLEN);
 }
 
-void
-disableTPS82740B(void)
+void disableTPS82740B(void)
 {
 	GPIO_DRV_ClearPinOutput(kWarpPinTPS82740B_CTLEN);
 }
 
 
-void
-enableTPS82740A(uint16_t voltageMillivolts)
+void enableTPS82740A(uint16_t voltageMillivolts)
 {
 	setTPS82740CommonControlLines(voltageMillivolts);
 	GPIO_DRV_SetPinOutput(kWarpPinTPS82740A_CTLEN);
@@ -598,8 +468,7 @@ enableTPS82740A(uint16_t voltageMillivolts)
 }
 
 
-void
-enableTPS82740B(uint16_t voltageMillivolts)
+void enableTPS82740B(uint16_t voltageMillivolts)
 {
 	setTPS82740CommonControlLines(voltageMillivolts);
 	GPIO_DRV_ClearPinOutput(kWarpPinTPS82740A_CTLEN);
@@ -615,8 +484,7 @@ enableTPS82740B(uint16_t voltageMillivolts)
 }
 
 
-void
-setTPS82740CommonControlLines(uint16_t voltageMillivolts)
+void setTPS82740CommonControlLines(uint16_t voltageMillivolts)
 {
 	/*
 	 *	 From Manual:
@@ -707,9 +575,7 @@ setTPS82740CommonControlLines(uint16_t voltageMillivolts)
 			break;
 		}
 
-		/*
-		 *	Should never happen, due to previous check in enableSssupply()
-		 */
+		//	Should never happen, due to previous check in enableSssupply()
 		default:
 		{
 #ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
@@ -718,16 +584,13 @@ setTPS82740CommonControlLines(uint16_t voltageMillivolts)
 		}
 	}
 
-	/*
-	 *	Vload ramp time of the TPS82740 is 800us max (datasheet, Section 8.5 / page 5)
-	 */
+	//	Vload ramp time of the TPS82740 is 800us max (datasheet, Section 8.5 / page 5)
 	OSA_TimeDelay(gWarpSupplySettlingDelayMilliseconds);
 }
 
 
 
-void
-enableSssupply(uint16_t voltageMillivolts)
+void enableSssupply(uint16_t voltageMillivolts)
 {
 	if (voltageMillivolts >= 1800 && voltageMillivolts <= 2500)
 	{
@@ -747,8 +610,7 @@ enableSssupply(uint16_t voltageMillivolts)
 
 
 
-void
-disableSssupply(void)
+void disableSssupply(void)
 {
 	disableTPS82740A();
 	disableTPS82740B();
@@ -763,16 +625,13 @@ disableSssupply(void)
 	 */
 	GPIO_DRV_SetPinOutput(kWarpPinTS5A3154_IN);
 
-	/*
-	 *	Vload ramp time of the TPS82740 is 800us max (datasheet, Section 8.5 / page 5)
-	 */
+	//	Vload ramp time of the TPS82740 is 800us max (datasheet, Section 8.5 / page 5)
 	OSA_TimeDelay(gWarpSupplySettlingDelayMilliseconds);
 }
 
 
 
-void
-warpLowPowerSecondsSleep(uint32_t sleepSeconds, bool forceAllPinsIntoLowPowerState)
+void warpLowPowerSecondsSleep(uint32_t sleepSeconds, bool forceAllPinsIntoLowPowerState)
 {
 	/*
 	 *	Set all pins into low-power states. We don't just disable all pins,
@@ -789,21 +648,10 @@ warpLowPowerSecondsSleep(uint32_t sleepSeconds, bool forceAllPinsIntoLowPowerSta
 }
 
 
+void printPinDirections(void){}
+void dumpProcessorState(void){}
 
-void
-printPinDirections(void)
-{
-}
-
-
-
-void
-dumpProcessorState(void)
-{
-}
-
-int
-main(void)
+int main(void)
 {
 	uint8_t					key;
 	WarpSensorDevice			menuTargetSensor = kWarpSensorBMX055accel;
@@ -833,7 +681,6 @@ main(void)
 	power_manager_user_config_t const *	powerConfigs[] = {
 							/*
 							 *	NOTE: This order is depended on by POWER_SYS_SetMode()
-							 *
 							 *	See KSDK13APIRM.pdf Section 55.5.3
 							 */
 							&warpPowerModeWaitConfig,
@@ -849,44 +696,28 @@ main(void)
 
 	WarpPowerManagerCallbackStructure			powerManagerCallbackStructure;
 
-	/*
-	 *	Callback configuration structure for power manager
-	 */
+	//	Callback configuration structure for power manager
 	const power_manager_callback_user_config_t callbackCfg0 = {
 							callback0,
 							kPowerManagerCallbackBeforeAfter,
 							(power_manager_callback_data_t *) &powerManagerCallbackStructure};
 
-	/*
-	 *	Pointers to power manager callbacks.
-	 */
+	//	Pointers to power manager callbacks.
 	power_manager_callback_user_config_t const *	callbacks[] = {
 								&callbackCfg0
 						};
 
 
 
-	/*
-	 *	Enable clock for I/O PORT A and PORT B
-	 */
+	//	Enable clock for I/O PORT A and PORT B
 	CLOCK_SYS_EnablePortClock(0);
 	CLOCK_SYS_EnablePortClock(1);
 
-
-
-	/*
-	 *	Setup board clock source.
-	 */
+	//	Setup board clock source.
 	g_xtal0ClkFreq = 32768U;
 
-
-
-	/*
-	 *	Initialize KSDK Operating System Abstraction layer (OSA) layer.
-	 */
+	//	Initialize KSDK Operating System Abstraction layer (OSA) layer.
 	OSA_Init();
-
-
 
 	/*
 	 *	Setup SEGGER RTT to output as much as fits in buffers.
@@ -904,8 +735,6 @@ main(void)
 	SEGGER_RTT_WriteString(0, "1...\n\r");
 	OSA_TimeDelay(200);
 
-
-
 	/*
 	 *	Configure Clock Manager to default, and set callback for Clock Manager mode transition.
 	 *
@@ -918,18 +747,10 @@ main(void)
 			);
 	CLOCK_SYS_UpdateConfiguration(CLOCK_CONFIG_INDEX_FOR_RUN, kClockManagerPolicyForcible);
 
-
-
-	/*
-	 *	Initialize RTC Driver
-	 */
+	//	Initialize RTC Driver
 	RTC_DRV_Init(0);
 
-
-
-	/*
-	 *	Set initial date to 1st January 2016 00:00, and set date via RTC driver
-	 */
+	//	Set initial date to 1st January 2016 00:00, and set date via RTC driver
 	warpBootDate.year	= 2016U;
 	warpBootDate.month	= 1U;
 	warpBootDate.day	= 1U;
@@ -938,11 +759,7 @@ main(void)
 	warpBootDate.second	= 0U;
 	RTC_DRV_SetDatetime(0, &warpBootDate);
 
-
-
-	/*
-	 *	Setup Power Manager Driver
-	 */
+	//	Setup Power Manager Driver
 	memset(&powerManagerCallbackStructure, 0, sizeof(WarpPowerManagerCallbackStructure));
 
 
@@ -975,14 +792,8 @@ main(void)
 			sizeof(callbacks)/sizeof(power_manager_callback_user_config_t *)
 			);
 
-
-
-	/*
-	 *	Switch CPU to Very Low Power Run (VLPR) mode
-	 */
+	//	Switch CPU to Very Low Power Run (VLPR) mode
 	warpSetLowPowerMode(kWarpPowerModeVLPR, 0);
-
-
 
 	/*
 	 *	Initialize the GPIO pins with the appropriate pull-up, etc.,
@@ -998,11 +809,7 @@ main(void)
 	 */
 	lowPowerPinStates();
 
-
-
-	/*
-	 *	Toggle LED3 (kWarpPinSI4705_nRST)
-	 */
+	//	Toggle LED3 (kWarpPinSI4705_nRST)
 	GPIO_DRV_SetPinOutput(kWarpPinSI4705_nRST);
 	OSA_TimeDelay(200);
 	GPIO_DRV_ClearPinOutput(kWarpPinSI4705_nRST);
@@ -1017,11 +824,9 @@ main(void)
 
 
 
-	/*
-	 *	Initialize all the sensors
-	 */
+	//	Initialize all the sensors
 	initINA219(0x40, &deviceINA219State);
-	initMMA8451Q(	0x1D	/* i2cAddress */,	&deviceMMA8451QState	);
+	initMMA8451Q(0x1D, &deviceMMA8451QState);
 	/*
 	 *	Make sure SCALED_SENSOR_SUPPLY is off.
 	 *
@@ -1029,18 +834,13 @@ main(void)
 	 */
 	disableSssupply();
 
-
-	/*
-	 *	TODO: initialize the kWarpPinKL03_VDD_ADC, write routines to read the VDD and temperature
-	 */
+	//	TODO: initialize the kWarpPinKL03_VDD_ADC, write routines to read the VDD and temperature
 
 
 
 
 #ifdef WARP_BUILD_BOOT_TO_CSVSTREAM
-	/*
-	 *	Force to printAllSensors
-	 */
+	//	Force to printAllSensors
 	gWarpI2cBaudRateKbps = 300;
 	warpSetLowPowerMode(kWarpPowerModeRUN, 0 /* sleep seconds : irrelevant here */);
 	enableSssupply(3000);
@@ -1156,14 +956,12 @@ main(void)
 
 		switch (key)
 		{
-			/*
-			 *		Select sensor
-			 */
+			// Select Sensor - modified to also write to INA219 registers
 			case 'a':
 			{
 				SEGGER_RTT_WriteString(0, "\r\tSelect:\n");
 				SEGGER_RTT_WriteString(0, "\r\t- '1' Write to INA219 Config\n");
-				SEGGER_RTT_WriteString(0, "\r\t- '2' Write to INA219 Config\n");
+				SEGGER_RTT_WriteString(0, "\r\t- '2' Write to INA219 Calibration\n");
 				SEGGER_RTT_WriteString(0, "\r\t- '5' MMA8451Q			(0x00--0x31): 1.95V -- 3.6V\n");
 				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 				SEGGER_RTT_WriteString(0, "\r\t- 'l' INA219\n");
@@ -1178,8 +976,10 @@ main(void)
 				{
 					case '1':
 					{
+						OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 						SEGGER_RTT_WriteString(0, "\r\tConfig Value> ");
 						uint16_t payload = readDoubleHexByte();
+						OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 						writeSensorRegisterINA219(0x00, payload, menuI2cPullupValue);
 						break;
 					}
@@ -1214,17 +1014,13 @@ main(void)
 				break;
 			}
 
-			/*
-			 *	Change default I2C baud rate
-			 */
+			//	Change default I2C baud rate
 			case 'b':
 			{
 				SEGGER_RTT_WriteString(0, "\r\n\tSet I2C baud rate in kbps (e.g., '0001')> ");
 				gWarpI2cBaudRateKbps = read4digits();
 
-				/*
-				 *	Round 9999kbps to 10Mbps
-				 */
+				//	Round 9999kbps to 10Mbps
 				if (gWarpI2cBaudRateKbps == 9999)
 				{
 					gWarpI2cBaudRateKbps = 10000;
@@ -1237,17 +1033,13 @@ main(void)
 				break;
 			}
 
-			/*
-			 *	Change default SPI baud rate
-			 */
+			//	Change default SPI baud rate
 			case 'c':
 			{
 				SEGGER_RTT_WriteString(0, "\r\n\tSet SPI baud rate in kbps (e.g., '0001')> ");
 				gWarpSpiBaudRateKbps = read4digits();
 
-				/*
-				 *	Round 9999kbps to 10Mbps
-				 */
+				//	Round 9999kbps to 10Mbps
 				if (gWarpSpiBaudRateKbps == 9999)
 				{
 					gWarpSpiBaudRateKbps = 10000;
@@ -1260,9 +1052,7 @@ main(void)
 				break;
 			}
 
-			/*
-			 *	Change default UART baud rate
-			 */
+			//	Change default UART baud rate
 			case 'd':
 			{
 				SEGGER_RTT_WriteString(0, "\r\n\tSet UART baud rate in kbps (e.g., '0001')> ");
@@ -1274,9 +1064,7 @@ main(void)
 				break;
 			}
 
-			/*
-			 *	Set register address for subsequent operations
-			 */
+			//	Set register address for subsequent operations
 			case 'e':
 			{
 				SEGGER_RTT_WriteString(0, "\r\n\tEnter 2-nybble register hex address (e.g., '3e')> ");
@@ -1288,9 +1076,7 @@ main(void)
 				break;
 			}
 
-			/*
-			 *	Write byte to sensor
-			 */
+			//	Write byte to sensor
 			case 'f':
 			{
 				uint8_t		i2cAddress, payloadByte[1], commandByte[1];
@@ -1345,15 +1131,14 @@ main(void)
 				}
 
 				/*
-				 *	NOTE: do not disable the supply here, because we typically want to build on the effect of this register write command.
+				 *	NOTE: do not disable the supply here, because we typically
+				 *	want to build on the effect of this register write command.
 				 */
 
 				break;
 			}
 
-			/*
-			 *	Configure default TPS82740 voltage
-			 */
+			//	Configure default TPS82740 voltage
 			case 'g':
 			{
 				SEGGER_RTT_WriteString(0, "\r\n\tOverride SSSUPPLY in mV (e.g., '1800')> ");
@@ -1365,9 +1150,7 @@ main(void)
 				break;
 			}
 
-			/*
-			 *	Activate low-power modes in all sensors.
-			 */
+			//	Activate low-power modes in all sensors.
 			case 'h':
 			{
 				SEGGER_RTT_WriteString(0, "\r\n\tNOTE: First power sensors and enable I2C\n\n");
@@ -1376,9 +1159,7 @@ main(void)
 				break;
 			}
 
-			/*
-			 *	Configure default pullup enable value
-			 */
+			//	Configure default pullup enable value
 			case 'i':
 			{
 				SEGGER_RTT_WriteString(0, "\r\n\tDefault pullup enable value in kiloOhms (e.g., '0000')> ");
@@ -1391,9 +1172,7 @@ main(void)
 				break;
 			}
 
-			/*
-			 *	Start repeated read
-			 */
+			//	Start repeated read
 			case 'j':
 			{
 				bool		autoIncrement, chatty;
@@ -1448,9 +1227,7 @@ main(void)
 				break;
 			}
 
-			/*
-			 *	Sleep for 30 seconds.
-			 */
+			//	Sleep for 30 seconds.
 			case 'k':
 			{
 				SEGGER_RTT_WriteString(0, "\r\n\tSleeping until system reset...\n");
@@ -1459,9 +1236,7 @@ main(void)
 				break;
 			}
 
-			/*
-			 *	Send repeated byte on I2C or SPI
-			 */
+			//	Send repeated byte on I2C or SPI
 			case 'l':
 			case 'm':
 			{
@@ -1502,45 +1277,35 @@ main(void)
 			}
 
 
-			/*
-			 *	enable SSSUPPLY
-			 */
+			//	enable SSSUPPLY
 			case 'n':
 			{
 				enableSssupply(menuSupplyVoltage);
 				break;
 			}
 
-			/*
-			 *	disable SSSUPPLY
-			 */
+			//	disable SSSUPPLY
 			case 'o':
 			{
 				disableSssupply();
 				break;
 			}
 
-			/*
-			 *	Switch to VLPR
-			 */
+			//	Switch to VLPR
 			case 'p':
 			{
 				warpSetLowPowerMode(kWarpPowerModeVLPR, 0 /* sleep seconds : irrelevant here */);
 				break;
 			}
 
-			/*
-			 *	Switch to RUN
-			 */
+			//	Switch to RUN
 			case 'r':
 			{
 				warpSetLowPowerMode(kWarpPowerModeRUN, 0 /* sleep seconds : irrelevant here */);
 				break;
 			}
 
-			/*
-			 *	Power up all sensors
-			 */
+			//	Power up all sensors
 			case 's':
 			{
 				SEGGER_RTT_WriteString(0, "\r\n\tNOTE: First power sensors and enable I2C\n\n");
@@ -1548,9 +1313,7 @@ main(void)
 				break;
 			}
 
-			/*
-			 *	Dump processor state
-			 */
+			//	Dump processor state
 			case 't':
 			{
 				dumpProcessorState();
@@ -1573,7 +1336,10 @@ main(void)
 				break;
 			}
 			/*
-			 *	Simply spin for 10 seconds. Since the SWD pins should only be enabled when we are waiting for key at top of loop (or toggling after printf), during this time there should be no interference from the SWD.
+			 *	Simply spin for 10 seconds. Since the SWD pins should only be
+			 *	enabled when we are waiting for key at top of loop (or toggling
+			 *	after printf), during this time there should be no interference
+			 *	from the SWD.
 			 */
 			case 'x':
 			{
@@ -1585,11 +1351,12 @@ main(void)
 			}
 
 			/*
-			 *	Stress test, including bit-wise toggling and checksum, as well as extensive add and mul, with continous read and write to I2C MMA8451Q
+			 *	Stress test, including bit-wise toggling and checksum, as well
+			 *	as extensive add and mul, with continous read and write to I2C
+			 *	MMA8451Q
 			 */
-			/*
-			 *	Dump all the sensor data in one go
-			 */
+
+			//	Dump all the sensor data in one go
 			case 'z':
 			{
 				bool		hexModeFlag;
@@ -1609,18 +1376,14 @@ main(void)
 
 				printAllSensors(true /* printHeadersAndCalibration */, hexModeFlag, menuDelayBetweenEachRun, menuI2cPullupValue);
 
-				/*
-				 *	Not reached (printAllSensors() does not return)
-				 */
+				//	Not reached (printAllSensors() does not return)
 				disableI2Cpins();
 
 				break;
 			}
 
 
-			/*
-			 *	Ignore naked returns.
-			 */
+			//	Ignore naked returns.
 			case '\n':
 			{
 				SEGGER_RTT_WriteString(0, "\r\tPayloads make rockets more than just fireworks.");
@@ -1641,12 +1404,9 @@ main(void)
 
 
 
-void
-printAllSensors(bool printHeadersAndCalibration, bool hexModeFlag, int menuDelayBetweenEachRun, int i2cPullupValue)
+void printAllSensors(bool printHeadersAndCalibration, bool hexModeFlag, int menuDelayBetweenEachRun, int i2cPullupValue)
 {
-	/*
-	 *	A 32-bit counter gives us > 2 years of before it wraps, even if sampling at 60fps
-	 */
+	//	A 32-bit counter gives us > 2 years of before it wraps, even if sampling at 60fps
 	uint32_t	readingCount = 0;
 	uint32_t	numberOfConfigErrors = 0;
 
@@ -1696,8 +1456,7 @@ printAllSensors(bool printHeadersAndCalibration, bool hexModeFlag, int menuDelay
 }
 
 
-void
-loopForSensor(	const char *  tagString,
+void loopForSensor(	const char *  tagString,
 		WarpStatus  (* readSensorRegisterFunction)(uint8_t deviceRegister, int numberOfBytes),
 		volatile WarpI2CDeviceState *  i2cDeviceState,
 		volatile WarpSPIDeviceState *  spiDeviceState,
@@ -1848,8 +1607,16 @@ loopForSensor(	const char *  tagString,
 
 
 
-void
-repeatRegisterReadForDeviceAndAddress(WarpSensorDevice warpSensorDevice, uint8_t baseAddress, uint16_t pullupValue, bool autoIncrement, int chunkReadsPerAddress, bool chatty, int spinDelay, int repetitionsPerAddress, uint16_t sssupplyMillivolts, uint16_t adaptiveSssupplyMaxMillivolts, uint8_t referenceByte)
+void repeatRegisterReadForDeviceAndAddress(WarpSensorDevice warpSensorDevice,
+										   uint8_t baseAddress,
+										   uint16_t pullupValue,
+										   bool autoIncrement,
+										   int chunkReadsPerAddress,
+										   bool chatty, int spinDelay,
+										   int repetitionsPerAddress,
+										   uint16_t sssupplyMillivolts,
+										   uint16_t adaptiveSssupplyMaxMillivolts,
+										   uint8_t referenceByte)
 {
 	if (warpSensorDevice != kWarpSensorADXL362)
 	{
@@ -1858,20 +1625,9 @@ repeatRegisterReadForDeviceAndAddress(WarpSensorDevice warpSensorDevice, uint8_t
 
 	switch (warpSensorDevice)
 	{
-		case kWarpSensorADXL362:
-		{
-			/*
-			 *	ADXL362: VDD 1.6--3.5
-			 */
-			SEGGER_RTT_WriteString(0, "\r\n\tADXL362 Read Aborted. Device Disabled :(");
-			break;
-		}
-
 		case kWarpSensorMMA8451Q:
 		{
-			/*
-			 *	MMA8451Q: VDD 1.95--3.6
-			 */
+			//	MMA8451Q: VDD 1.95--3.6
 #ifdef WARP_BUILD_ENABLE_DEVMMA8451Q
 			loopForSensor(	"\r\nMMA8451Q:\n\r",		/*	tagString			*/
 					&readSensorRegisterMMA8451Q,	/*	readSensorRegisterFunction	*/
@@ -1916,143 +1672,6 @@ repeatRegisterReadForDeviceAndAddress(WarpSensorDevice warpSensorDevice, uint8_t
 			break;
 		}
 
-
-
-		case kWarpSensorBME680:
-		{
-			/*
-			 *	BME680: VDD 1.7--3.6
-			 */
-			SEGGER_RTT_WriteString(0, "\r\n\nBME680 Read Aborted. Device Disabled :(");
-			break;
-		}
-
-		case kWarpSensorBMX055accel:
-		{
-			/*
-			 *	BMX055accel: VDD 2.4V -- 3.6V
-			 */
-			SEGGER_RTT_WriteString(0, "\r\n\tBMX055accel Read Aborted. Device Disabled :( ");
-			break;
-		}
-
-		case kWarpSensorBMX055gyro:
-		{
-			/*
-			 *	BMX055gyro: VDD 2.4V -- 3.6V
-			 */
-			SEGGER_RTT_WriteString(0, "\r\n\tBMX055gyro Read Aborted. Device Disabled :( ");
-			break;
-		}
-
-		case kWarpSensorBMX055mag:
-		{
-			/*
-			 *	BMX055mag: VDD 2.4V -- 3.6V
-			 */
-			SEGGER_RTT_WriteString(0, "\r\n\t BMX055mag Read Aborted. Device Disabled :( ");
-			break;
-		}
-
-		case kWarpSensorMAG3110:
-		{
-			/*
-			 *	MAG3110: VDD 1.95 -- 3.6
-			 */
-			SEGGER_RTT_WriteString(0, "\r\n\tMAG3110 Read Aborted. Device Disabled :( ");
-			break;
-		}
-
-		case kWarpSensorL3GD20H:
-		{
-			/*
-			 *	L3GD20H: VDD 2.2V -- 3.6V
-			 */
-			SEGGER_RTT_WriteString(0, "\r\n\tL3GD20H Read Aborted. Device Disabled :( ");
-			break;
-		}
-
-		case kWarpSensorLPS25H:
-		{
-			/*
-			 *	LPS25H: VDD 1.7V -- 3.6V
-			 */
-			SEGGER_RTT_WriteString(0, "\r\n\tLPS25H Read Aborted. Device Disabled :( ");
-			break;
-		}
-
-		case kWarpSensorTCS34725:
-		{
-			/*
-			 *	TCS34725: VDD 2.7V -- 3.3V
-			 */
-			SEGGER_RTT_WriteString(0, "\r\n\tTCS34725 Read Aborted. Device Disabled :( ");
-			break;
-		}
-
-		case kWarpSensorSI4705:
-		{
-			/*
-			 *	SI4705: VDD 2.7V -- 5.5V
-			 */
-			SEGGER_RTT_WriteString(0, "\r\n\tSI4705 Read Aborted. Device Disabled :( ");
-			break;
-		}
-
-		case kWarpSensorHDC1000:
-		{
-			/*
-			 *	HDC1000: VDD 3V--5V
-			 */
-			SEGGER_RTT_WriteString(0, "\r\n\tHDC1000 Read Aborted. Device Disabled :( ");
-			break;
-		}
-
-		case kWarpSensorSI7021:
-		{
-			/*
-			 *	SI7021: VDD 1.9V -- 3.6V
-			 */
-			SEGGER_RTT_WriteString(0, "\r\n\tSI7021 Read Aborted. Device Disabled :( ");
-			break;
-		}
-
-		case kWarpSensorCCS811:
-		{
-			/*
-			 *	CCS811: VDD 1.8V -- 3.6V
-			 */
-			SEGGER_RTT_WriteString(0, "\r\n\tCCS811 Read Aborted. Device Disabled :( ");
-			break;
-		}
-
-		case kWarpSensorAMG8834:
-		{
-			/*
-			 *	AMG8834: VDD ?V -- ?V
-			 */
-			SEGGER_RTT_WriteString(0, "\r\n\tAMG8834 Read Aborted. Device Disabled :( ");
-			break;
-		}
-
-		case kWarpSensorAS7262:
-		{
-			/*
-			 *	AS7262: VDD 2.7--3.6
-			 */
-			SEGGER_RTT_WriteString(0, "\r\n\tAS7262 Read Aborted. Device Disabled :( ");
-			break;
-		}
-
-		case kWarpSensorAS7263:
-		{
-			/*
-			 *	AS7263: VDD 2.7--3.6
-			 */
-			SEGGER_RTT_WriteString(0, "\r\n\tAS7263 Read Aborted. Device Disabled :( ");
-			break;
-		}
-
 		default:
 		{
 #ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
@@ -2069,8 +1688,7 @@ repeatRegisterReadForDeviceAndAddress(WarpSensorDevice warpSensorDevice, uint8_t
 
 
 
-int
-char2int(int character)
+int char2int(int character)
 {
 	if (character >= '0' && character <= '9')
 	{
@@ -2112,10 +1730,7 @@ uint8_t readHexByte(void)
 	return (char2int(topNybble) << 4) + char2int(bottomNybble);
 }
 
-
-
-int
-read4digits(void)
+int read4digits(void)
 {
 	uint8_t		digit1, digit2, digit3, digit4;
 
@@ -2129,8 +1744,9 @@ read4digits(void)
 
 
 
-WarpStatus
-writeByteToI2cDeviceRegister(uint8_t i2cAddress, bool sendCommandByte, uint8_t commandByte, bool sendPayloadByte, uint8_t payloadByte)
+WarpStatus writeByteToI2cDeviceRegister(uint8_t i2cAddress, bool sendCommandByte,
+										uint8_t commandByte, bool sendPayloadByte,
+										uint8_t payloadByte)
 {
 	i2c_status_t	status;
 	uint8_t		commandBuffer[1];
@@ -2158,8 +1774,7 @@ writeByteToI2cDeviceRegister(uint8_t i2cAddress, bool sendCommandByte, uint8_t c
 
 
 
-WarpStatus
-writeBytesToSpi(uint8_t *  payloadBytes, int payloadLength)
+WarpStatus writeBytesToSpi(uint8_t *  payloadBytes, int payloadLength)
 {
 	uint8_t		inBuffer[payloadLength];
 	spi_status_t	status;
@@ -2178,121 +1793,12 @@ writeBytesToSpi(uint8_t *  payloadBytes, int payloadLength)
 
 
 
-void
-powerupAllSensors(void)
+void powerupAllSensors(void)
 {
-	WarpStatus	status;
-
-	/*
-	 *	BMX055mag
-	 *
-	 *	Write '1' to power control bit of register 0x4B. See page 134.
-	 */
-	SEGGER_RTT_WriteString(0, "\r\tPowerup command failed. BMX055 disabled \n");
+	SEGGER_RTT_WriteString(0, "\r\tContents removed from powerupAllSensors - see original Warp Firmware \n");
 }
 
-
-
-void
-activateAllLowPowerSensorModes(bool verbose)
+void activateAllLowPowerSensorModes(bool verbose)
 {
-	WarpStatus	status;
-
-
-
-	/*
-	 *	ADXL362:	See Power Control Register (Address: 0x2D, Reset: 0x00).
-	 *
-	 *	POR values are OK.
-	 */
-
-
-
-	/*
-	 *	BMX055accel: At POR, device is in Normal mode. Move it to Deep Suspend mode.
-	 *
-	 *	Write '1' to deep suspend bit of register 0x11, and write '0' to suspend bit of register 0x11. See page 23.
-	 */
-	SEGGER_RTT_WriteString(0, "\r\tPowerdown command abandoned. BMX055 disabled\n");
-
-	/*
-	 *	BMX055gyro: At POR, device is in Normal mode. Move it to Deep Suspend mode.
-	 *
-	 *	Write '1' to deep suspend bit of register 0x11. See page 81.
-	 */
-	SEGGER_RTT_WriteString(0, "\r\tPowerdown command abandoned. BMX055 disabled\n");
-
-
-
-	/*
-	 *	BMX055mag: At POR, device is in Suspend mode. See page 121.
-	 *
-	 *	POR state seems to be powered down.
-	 */
-
-
-
-	/*
-	 *	MMA8451Q: See 0x2B: CTRL_REG2 System Control 2 Register (page 43).
-	 *
-	 *	POR state seems to be not too bad.
-	 */
-
-
-
-	/*
-	 *	LPS25H: See Register CTRL_REG1, at address 0x20 (page 26).
-	 *
-	 *	POR state seems to be powered down.
-	 */
-
-
-
-	/*
-	 *	MAG3110: See Register CTRL_REG1 at 0x10. (page 19).
-	 *
-	 *	POR state seems to be powered down.
-	 */
-
-
-
-	/*
-	 *	HDC1000: currently can't turn it on (3V)
-	 */
-
-
-
-	/*
-	 *	SI7021: Can't talk to it correctly yet.
-	 */
-
-
-
-	/*
-	 *	L3GD20H: See CTRL1 at 0x20 (page 36).
-	 *
-	 *	POR state seems to be powered down.
-	 */
-	SEGGER_RTT_WriteString(0, "\r\tPowerdown command abandoned. L3GD20H disabled\n");
-
-
-
-	/*
-	 *	BME680: TODO
-	 */
-
-
-
-	/*
-	 *	TCS34725: By default, is in the "start" state (see page 9).
-	 *
-	 *	Make it go to sleep state. See page 17, 18, and 19.
-	 */
-	SEGGER_RTT_WriteString(0, "\r\tPowerdown command abandoned. TCS34725 disabled\n");
-
-	/*
-	 *	SI4705: Send a POWER_DOWN command (byte 0x17). See AN332 page 124 and page 132.
-	 *
-	 *	For now, simply hold its reset line low.
-	 */
+	SEGGER_RTT_WriteString(0, "\r\tContents removed from activateAllLowPowerSensorModes - see original Warp Firmware \n");
 }
