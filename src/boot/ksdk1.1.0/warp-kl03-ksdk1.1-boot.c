@@ -74,20 +74,6 @@
 volatile WarpI2CDeviceState			deviceINA219State;
 volatile WarpI2CDeviceState			deviceMMA8451QState;
 
-WarpStatus setupINA219(){
-	WarpStatus	i2cWriteStatus1, i2cWriteStatus2;
-
-	// i2cWriteStatus1 = writeSensorRegisterINA219(kWarpSensorConfigurationRegisterINA219F_SETUP /* register address F_SETUP */,
-	// 						0x399F /* payload: Disable FIFO */,
-	// 						1);
-
-	// i2cWriteStatus1 = writeSensorRegisterINA219(0x05,
-	// 						0x05,
-	// 						menuI2cPullupValue);
-
-	return i2cWriteStatus1;
-};
-
 /*
  *	TODO: move this and possibly others into a global structure
  */
@@ -128,6 +114,7 @@ void					enableSssupply(uint16_t voltageMillivolts);
 void					disableSssupply(void);
 void					activateAllLowPowerSensorModes(bool verbose);
 void					powerupAllSensors(void);
+uint16_t 				readDoubleHexByte(void);
 uint8_t					readHexByte(void);
 int					read4digits(void);
 void					printAllSensors(bool printHeadersAndCalibration, bool hexModeFlag, int menuDelayBetweenEachRun, int i2cPullupValue);
@@ -1069,7 +1056,6 @@ main(void)
 	devSSD1331init();
 	// setupINA219();
 	enableI2Cpins(menuI2cPullupValue);
-	writeSensorRegisterINA219(0x05, 0xFFFF, menuI2cPullupValue);
 	while (1)
 	{
 		/*
@@ -1176,65 +1162,35 @@ main(void)
 			case 'a':
 			{
 				SEGGER_RTT_WriteString(0, "\r\tSelect:\n");
-				SEGGER_RTT_WriteString(0, "\r\t- '1' ADXL362			(0x00--0x2D): 1.6V -- 3.5V (compiled out) \n");
-				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
-				SEGGER_RTT_WriteString(0, "\r\t- '2' BMX055accel 		(0x00--0x3F): 2.4V -- 3.6V (compiled out) \n");
-				SEGGER_RTT_WriteString(0, "\r\t- '3' BMX055gyro			(0x00--0x3F): 2.4V -- 3.6V (compiled out) \n");
-				SEGGER_RTT_WriteString(0, "\r\t- '4' BMX055mag			(0x40--0x52): 2.4V -- 3.6V (compiled out) \n");
-				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
+				SEGGER_RTT_WriteString(0, "\r\t- '1' Write to INA219 Config\n");
+				SEGGER_RTT_WriteString(0, "\r\t- '2' Write to INA219 Config\n");
 				SEGGER_RTT_WriteString(0, "\r\t- '5' MMA8451Q			(0x00--0x31): 1.95V -- 3.6V\n");
 				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
-				SEGGER_RTT_WriteString(0, "\r\t- '6' LPS25H			(0x08--0x24): 1.7V -- 3.6V (compiled out) \n");
-				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
-				SEGGER_RTT_WriteString(0, "\r\t- '7' MAG3110			(0x00--0x11): 1.95V -- 3.6V (compiled out) \n");
-				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
-				SEGGER_RTT_WriteString(0, "\r\t- '8' HDC1000			(0x00--0x1F): 3.0V -- 5.0V (compiled out) \n");
-				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
-				SEGGER_RTT_WriteString(0, "\r\t- '9' SI7021			(0x00--0x0F): 1.9V -- 3.6V (compiled out) \n");
-				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
-				SEGGER_RTT_WriteString(0, "\r\t- 'a' L3GD20H			(0x0F--0x39): 2.2V -- 3.6V (compiled out) \n");
-				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
-				SEGGER_RTT_WriteString(0, "\r\t- 'b' BME680			(0xAA--0xF8): 1.6V -- 3.6V (compiled out) \n");
-				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
-				SEGGER_RTT_WriteString(0, "\r\t- 'd' TCS34725			(0x00--0x1D): 2.7V -- 3.3V (compiled out) \n");
-				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
-				SEGGER_RTT_WriteString(0, "\r\t- 'e' SI4705			(n/a):        2.7V -- 5.5V (compiled out) \n");
-				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
-				SEGGER_RTT_WriteString(0, "\r\t- 'f' PAN1326			(n/a) (compiled out) \n");
-				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
-				SEGGER_RTT_WriteString(0, "\r\t- 'g' CCS811			(0x00--0xFF): 1.8V -- 3.6V (compiled out) \n");
-				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
-				SEGGER_RTT_WriteString(0, "\r\t- 'h' AMG8834			(0x00--?): ?V -- ?V (compiled out) \n");
-				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
-				SEGGER_RTT_WriteString(0, "\r\t- 'j' AS7262			(0x00--0x2B): 2.7V -- 3.6V (compiled out) \n");
-				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
-				SEGGER_RTT_WriteString(0, "\r\t- 'k' AS7263			(0x00--0x2B): 2.7V -- 3.6V (compiled out) \n");
-				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
 				SEGGER_RTT_WriteString(0, "\r\t- 'l' INA219\n");
 
 				SEGGER_RTT_WriteString(0, "\r\tEnter selection> ");
 				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 
 				key = SEGGER_RTT_WaitKey();
+				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 
 				switch(key)
 				{
+					case '1':
+					{
+						SEGGER_RTT_WriteString(0, "\r\tConfig Value> ");
+						uint16_t payload = readDoubleHexByte();
+						writeSensorRegisterINA219(0x00, payload, menuI2cPullupValue);
+						break;
+					}
+
+					case '2':
+					{
+						SEGGER_RTT_WriteString(0, "\r\tConfig Value> ");
+						uint16_t payload = readDoubleHexByte();
+						writeSensorRegisterINA219(0x05, payload, menuI2cPullupValue);
+						break;
+					}
 					case '5':
 					{
 						menuTargetSensor = kWarpSensorMMA8451Q;
@@ -2134,10 +2090,19 @@ char2int(int character)
 	return 0;
 }
 
+uint16_t readDoubleHexByte(void)
+{
+	uint8_t		topNybble1, bottomNybble1, topNybble2, bottomNybble2;
 
+	topNybble1 = SEGGER_RTT_WaitKey();
+	bottomNybble1 = SEGGER_RTT_WaitKey();
+	topNybble2 = SEGGER_RTT_WaitKey();
+	bottomNybble2 = SEGGER_RTT_WaitKey();
 
-uint8_t
-readHexByte(void)
+	return (char2int(topNybble1) << 12) + (char2int(bottomNybble1) <<8) + (char2int(topNybble2) << 4) + char2int(bottomNybble2);
+}
+
+uint8_t readHexByte(void)
 {
 	uint8_t		topNybble, bottomNybble;
 
