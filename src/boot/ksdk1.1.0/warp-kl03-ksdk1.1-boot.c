@@ -900,7 +900,9 @@ int main(void)
 
 		SEGGER_RTT_WriteString(0, "\rSelect:\n");
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-		SEGGER_RTT_WriteString(0, "\r- 'a': set default sensor.\n");
+		SEGGER_RTT_WriteString(0, "\r- '1': write to INA219 Register\n");
+		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
+		SEGGER_RTT_WriteString(0, "\r- 'a': set default sensor\n");
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 		SEGGER_RTT_WriteString(0, "\r- 'b': set I2C baud rate.\n");
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
@@ -956,22 +958,17 @@ int main(void)
 
 		switch (key)
 		{
-			// Select Sensor - modified to also write to INA219 registers
-			case 'a':
+			// Write to INA219
+			case '1':
 			{
 				SEGGER_RTT_WriteString(0, "\r\tSelect:\n");
-				SEGGER_RTT_WriteString(0, "\r\t- '1' Write to INA219 Config\n");
-				SEGGER_RTT_WriteString(0, "\r\t- '2' Write to INA219 Calibration\n");
-				SEGGER_RTT_WriteString(0, "\r\t- '5' MMA8451Q			(0x00--0x31): 1.95V -- 3.6V\n");
-				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-				SEGGER_RTT_WriteString(0, "\r\t- 'l' INA219\n");
-
+				SEGGER_RTT_WriteString(0, "\r\t- '1' Write to INA219 Config      (0x00)\n");
+				SEGGER_RTT_WriteString(0, "\r\t- '2' Write to INA219 Calibration (0x05)\n");
 				SEGGER_RTT_WriteString(0, "\r\tEnter selection> ");
 				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 
 				key = SEGGER_RTT_WaitKey();
 				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-
 				switch(key)
 				{
 					case '1':
@@ -991,6 +988,33 @@ int main(void)
 						writeSensorRegisterINA219(0x05, payload, menuI2cPullupValue);
 						break;
 					}
+					default:
+					{
+#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
+						SEGGER_RTT_printf(0, "\r\tInvalid selection '%c' !\n", key);
+#endif
+					}
+				}
+				break;
+			}
+
+			// Select Sensor - modified to also write to INA219 registers
+			case 'a':
+			{
+				SEGGER_RTT_WriteString(0, "\r\tSelect:\n");
+				SEGGER_RTT_WriteString(0, "\r\t- '2' Write to INA219 Calibration\n");
+				SEGGER_RTT_WriteString(0, "\r\t- '5' MMA8451Q			(0x00--0x31): 1.95V -- 3.6V\n");
+				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
+				SEGGER_RTT_WriteString(0, "\r\t- 'l' INA219\n");
+
+				SEGGER_RTT_WriteString(0, "\r\tEnter selection> ");
+				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
+
+				key = SEGGER_RTT_WaitKey();
+				OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
+
+				switch(key)
+				{
 					case '5':
 					{
 						menuTargetSensor = kWarpSensorMMA8451Q;
