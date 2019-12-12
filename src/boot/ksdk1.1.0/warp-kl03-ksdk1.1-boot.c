@@ -61,11 +61,13 @@
 
 #include "devINA219.h"
 #include "devMMA8451Q.h"
+#include "fsl_tpm_driver.h"
+#include "fsl_tpm_hal.h"
 
 #define WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
-#define						kWarpConstantStringI2cFailure		"\rI2C failed, reg 0x%02x, code %d\n"
-#define						kWarpConstantStringErrorInvalidVoltage	"\rInvalid supply voltage [%d] mV!"
-#define						kWarpConstantStringErrorSanity		"\rSanity check failed!"
+#define	kWarpConstantStringI2cFailure		"\rI2C failed, reg 0x%02x, code %d\n"
+#define	kWarpConstantStringErrorInvalidVoltage	"\rInvalid supply voltage [%d] mV!"
+#define	kWarpConstantStringErrorSanity		"\rSanity check failed!"
 
 
 volatile WarpI2CDeviceState			deviceINA219State;
@@ -73,42 +75,55 @@ volatile WarpI2CDeviceState			deviceMMA8451QState;
 
 volatile i2c_master_state_t			i2cMasterState;
 volatile spi_master_state_t			spiMasterState;
-volatile spi_master_user_config_t		spiUserConfig;
-volatile lpuart_user_config_t 			lpuartUserConfig;
+volatile spi_master_user_config_t	spiUserConfig;
+volatile lpuart_user_config_t 		lpuartUserConfig;
 volatile lpuart_state_t 			lpuartState;
+volatile tpm_pwm_param_t			pwmParam;
+volatile tpm_general_config_t 		tpmConfig;
 
 volatile uint32_t			gWarpI2cBaudRateKbps		= 200;
 volatile uint32_t			gWarpUartBaudRateKbps		= 1;
 volatile uint32_t			gWarpSpiBaudRateKbps		= 200;
 volatile uint32_t			gWarpSleeptimeSeconds		= 0;
-volatile WarpModeMask			gWarpMode			= kWarpModeDisableAdcOnSleep;
+volatile WarpModeMask		gWarpMode					= kWarpModeDisableAdcOnSleep;
 volatile uint32_t			gWarpI2cTimeoutMilliseconds	= 5;
 volatile uint32_t			gWarpSpiTimeoutMicroseconds	= 5;
 volatile uint32_t			gWarpMenuPrintDelayMilliseconds	= 10;
 volatile uint32_t			gWarpSupplySettlingDelayMilliseconds = 1;
 
-void					sleepUntilReset(void);
-void					lowPowerPinStates(void);
-void					disableTPS82740A(void);
-void					disableTPS82740B(void);
-void					enableTPS82740A(uint16_t voltageMillivolts);
-void					enableTPS82740B(uint16_t voltageMillivolts);
-void					setTPS82740CommonControlLines(uint16_t voltageMillivolts);
-void					printPinDirections(void);
-void					dumpProcessorState(void);
-void					repeatRegisterReadForDeviceAndAddress(WarpSensorDevice warpSensorDevice, uint8_t baseAddress,
-								uint16_t pullupValue, bool autoIncrement, int chunkReadsPerAddress, bool chatty,
-								int spinDelay, int repetitionsPerAddress, uint16_t sssupplyMillivolts,
-								uint16_t adaptiveSssupplyMaxMillivolts, uint8_t referenceByte);
-int					char2int(int character);
-void					enableSssupply(uint16_t voltageMillivolts);
-void					disableSssupply(void);
-void					activateAllLowPowerSensorModes(bool verbose);
-void					powerupAllSensors(void);
-uint16_t 				readDoubleHexByte(void);
-uint8_t					readHexByte(void);
-int					read4digits(void);
-void					printAllSensors(bool printHeadersAndCalibration, bool hexModeFlag, int menuDelayBetweenEachRun, int i2cPullupValue);
+void sleepUntilReset(void);
+void lowPowerPinStates(void);
+void disableTPS82740A(void);
+void disableTPS82740B(void);
+void enableTPS82740A(uint16_t voltageMillivolts);
+void enableTPS82740B(uint16_t voltageMillivolts);
+void setTPS82740CommonControlLines(uint16_t voltageMillivolts);
+void printPinDirections(void);
+void dumpProcessorState(void);
+void repeatRegisterReadForDeviceAndAddress(WarpSensorDevice warpSensorDevice,
+								uint8_t baseAddress,
+								uint16_t pullupValue,
+								bool autoIncrement,
+								int chunkReadsPerAddress,
+								bool chatty,
+								int spinDelay,
+								int repetitionsPerAddress,
+								uint16_t sssupplyMillivolts,
+								uint16_t adaptiveSssupplyMaxMillivolts,
+								uint8_t referenceByte);
+
+int		char2int(int character);
+void 	enableSssupply(uint16_t voltageMillivolts);
+void 	disableSssupply(void);
+void 	activateAllLowPowerSensorModes(bool verbose);
+void 	powerupAllSensors(void);
+uint16_t readDoubleHexByte(void);
+uint8_t	readHexByte(void);
+int		read4digits(void);
+void 	printAllSensors(bool printHeadersAndCalibration,
+						bool hexModeFlag,
+						int menuDelayBetweenEachRun,
+						int i2cPullupValue);
 
 
 WarpStatus				writeByteToI2cDeviceRegister(uint8_t i2cAddress, bool sendCommandByte, uint8_t commandByte, bool sendPayloadByte, uint8_t payloadByte);
@@ -291,6 +306,23 @@ void disableSPIpins(void)
 
 
 	CLOCK_SYS_DisableSpiClock(0);
+}
+
+void enablePWMpins()
+{
+	//NOTE Unsure what a lot of this does
+	tpmConfig.isDBGMode = false;
+    tpmConfig.isGlobalTimeBase = false;
+    tpmConfig.isTriggerMode = false;
+    tpmConfig.isStopCountOnOveflow = false;
+    tpmConfig.isCountReloadOnTrig = false;
+	tpmConfig.triggerSource = 0;
+
+	CLOCK_SYS_EnableTpmClock(0);
+	// PTB13 -- > TPM1_CH1
+	PORT_HAL_SetMuxMode(PORTB_BASE, 13, kPortMuxAlt2);
+
+	TPM_DRV_Init(1, (tpm_general_config_t *)&tpmConfig);
 }
 
 void enableI2Cpins(uint16_t pullupValue)
@@ -854,10 +886,19 @@ int main(void)
 
 	// initialise screen
 	devSSD1331init();
-	// setupINA219();
 	enableI2Cpins(menuI2cPullupValue);
+	enablePWMpins();
+	pwmParam.mode = kTpmEdgeAlignedPWM;
+    pwmParam.edgeMode = kTpmHighTrue;
+    pwmParam.uFrequencyHZ = 5000;
+	pwmParam.uDutyCyclePercent = 0;
+	SEGGER_RTT_WriteString(0, "Getting to PWM");
+	TPM_DRV_PwmStart(1, (tpm_pwm_param_t *)&pwmParam, 1);
 	while (1)
 	{
+		// GPIO_DRV_SetPinOutput(GPIO_MAKE_PIN(HW_GPIOB, 13));
+		// OSA_TimeDelay(1000);
+		// GPIO_DRV_ClearPinOutput(GPIO_MAKE_PIN(HW_GPIOB, 13));
 		/*
 		 *	Do not, e.g., lowPowerPinStates() on each iteration, because we actually
 		 *	want to use menu to progressiveley change the machine state with various
