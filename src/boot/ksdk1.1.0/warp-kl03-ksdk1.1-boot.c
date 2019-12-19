@@ -62,6 +62,7 @@
 #include "devINA219.h"
 #include "devMMA8451Q.h"
 #include "fsl_tpm_driver.h"
+#include "PWMdriver.h"
 
 #define WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
 #define	kWarpConstantStringI2cFailure		"\rI2C failed, reg 0x%02x, code %d\n"
@@ -77,7 +78,7 @@ volatile spi_master_state_t			spiMasterState;
 volatile spi_master_user_config_t	spiUserConfig;
 volatile lpuart_user_config_t 		lpuartUserConfig;
 volatile lpuart_state_t 			lpuartState;
-volatile tpm_general_config_t 		tpmConfig;
+
 
 volatile uint32_t			gWarpI2cBaudRateKbps		= 200;
 volatile uint32_t			gWarpUartBaudRateKbps		= 1;
@@ -306,56 +307,6 @@ void disableSPIpins(void)
 	CLOCK_SYS_DisableSpiClock(0);
 }
 
-void enablePWMpins()
-{
-	//NOTE Unsure what a lot of this does
-	tpmConfig.isDBGMode = false;
-    tpmConfig.isGlobalTimeBase = true;
-    tpmConfig.isTriggerMode = false;
-    tpmConfig.isStopCountOnOveflow = false;
-    tpmConfig.isCountReloadOnTrig = false;
-	tpmConfig.triggerSource = 0;
-
-	// PTB10 -- > TPM0_CH1
-	// PTB11 -- > TPM0_CH0
-	// PTB13 -- > TPM1_CH1
-	// PTA0  -- > TPM1_CH0
-	PORT_HAL_SetMuxMode(PORTB_BASE, 10, kPortMuxAlt2);
-	PORT_HAL_SetMuxMode(PORTB_BASE, 11, kPortMuxAlt2);
-	PORT_HAL_SetMuxMode(PORTB_BASE, 13, kPortMuxAlt2);
-
-	// Changing mode of PTA0 stops the data line working
-	// PORT_HAL_SetMuxMode(PORTA_BASE, 0, kPortMuxAlt2);
-
-	//CLOCK_SYS_TPM initialised in DRV_INIT
-	TPM_DRV_Init(1U, (tpm_general_config_t *)&tpmConfig);
-	TPM_DRV_Init(0U, (tpm_general_config_t *)&tpmConfig);
-	TPM_DRV_SetClock(0U, kTpmClockSourceModuleMCGIRCLK, kTpmDividedBy1);
-	TPM_DRV_SetClock(1U, kTpmClockSourceModuleMCGIRCLK, kTpmDividedBy1);
-}
-
-bool startPWM(bool tpmdev, bool tpmchannel, uint8_t dutycycle, int freq)
-{
-	static tpm_pwm_param_t pwmSettings[] = {
-		{	//TPM0_CH0
-			.mode = kTpmEdgeAlignedPWM,
-			.edgeMode = kTpmHighTrue,
-			.uFrequencyHZ = 400,
-			.uDutyCyclePercent = 100,
-		},
-		{	//TPM0_CH1
-			.mode = kTpmEdgeAlignedPWM,
-			.edgeMode = kTpmHighTrue,
-			.uFrequencyHZ = 400,
-			.uDutyCyclePercent = 100,
-		}
-	};
-	pwmSettings[tpmchannel].uDutyCyclePercent = dutycycle;
-	pwmSettings[tpmchannel].uFrequencyHZ = freq;
-	return TPM_DRV_PwmStart(tpmdev, (tpm_pwm_param_t *)&pwmSettings[tpmchannel], tpmchannel);
-
-
-}
 
 void enableI2Cpins(uint16_t pullupValue)
 {
@@ -722,7 +673,7 @@ int main(void)
 	volatile WarpI2CDeviceState *		menuI2cDevice = NULL;
 	uint16_t				menuI2cPullupValue = 32768;
 	uint8_t					menuRegisterAddress = 0x00;
-	uint16_t				menuSupplyVoltage = 0;
+	uint16_t				menuSupplyVoltage = 1800;
 
 
 	rtc_datetime_t				warpBootDate;
@@ -922,10 +873,9 @@ int main(void)
 	enablePWMpins();
 	while (1)
 	{
-		menuSupplyVoltage = 1800;
 		for(char i=0; i<2; i++){
 			for(char j=0; j<2; j++){
-				if (!startPWM(i,j,95,100)){
+				if (!TPM_DRV_PwmStart(i, (tpm_pwm_param_t *)&pwmSettings[j], j)){
 					SEGGER_RTT_printf(0, "PWM FAILED TPM%d CH%d\n", i, j);
 				}
 			}
