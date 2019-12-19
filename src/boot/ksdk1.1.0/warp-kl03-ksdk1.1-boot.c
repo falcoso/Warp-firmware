@@ -62,7 +62,6 @@
 #include "devINA219.h"
 #include "devMMA8451Q.h"
 #include "fsl_tpm_driver.h"
-#include "fsl_tpm_hal.h"
 
 #define WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
 #define	kWarpConstantStringI2cFailure		"\rI2C failed, reg 0x%02x, code %d\n"
@@ -78,7 +77,6 @@ volatile spi_master_state_t			spiMasterState;
 volatile spi_master_user_config_t	spiUserConfig;
 volatile lpuart_user_config_t 		lpuartUserConfig;
 volatile lpuart_state_t 			lpuartState;
-volatile tpm_pwm_param_t			pwmParam;
 volatile tpm_general_config_t 		tpmConfig;
 
 volatile uint32_t			gWarpI2cBaudRateKbps		= 200;
@@ -126,10 +124,10 @@ void 	printAllSensors(bool printHeadersAndCalibration,
 						int i2cPullupValue);
 
 
-WarpStatus				writeByteToI2cDeviceRegister(uint8_t i2cAddress, bool sendCommandByte, uint8_t commandByte, bool sendPayloadByte, uint8_t payloadByte);
-WarpStatus				writeBytesToSpi(uint8_t *  payloadBytes, int payloadLength);
+WarpStatus	writeByteToI2cDeviceRegister(uint8_t i2cAddress, bool sendCommandByte, uint8_t commandByte, bool sendPayloadByte, uint8_t payloadByte);
+WarpStatus	writeBytesToSpi(uint8_t *  payloadBytes, int payloadLength);
 
-void					warpLowPowerSecondsSleep(uint32_t sleepSeconds, bool forceAllPinsIntoLowPowerState);
+void		warpLowPowerSecondsSleep(uint32_t sleepSeconds, bool forceAllPinsIntoLowPowerState);
 
 
 
@@ -312,17 +310,51 @@ void enablePWMpins()
 {
 	//NOTE Unsure what a lot of this does
 	tpmConfig.isDBGMode = false;
-    tpmConfig.isGlobalTimeBase = false;
+    tpmConfig.isGlobalTimeBase = true;
     tpmConfig.isTriggerMode = false;
     tpmConfig.isStopCountOnOveflow = false;
     tpmConfig.isCountReloadOnTrig = false;
 	tpmConfig.triggerSource = 0;
 
-	CLOCK_SYS_EnableTpmClock(0);
+	// PTB10 -- > TPM0_CH1
+	// PTB11 -- > TPM0_CH0
 	// PTB13 -- > TPM1_CH1
+	// PTA0  -- > TPM1_CH0
+	PORT_HAL_SetMuxMode(PORTB_BASE, 10, kPortMuxAlt2);
+	PORT_HAL_SetMuxMode(PORTB_BASE, 11, kPortMuxAlt2);
 	PORT_HAL_SetMuxMode(PORTB_BASE, 13, kPortMuxAlt2);
 
-	TPM_DRV_Init(1, (tpm_general_config_t *)&tpmConfig);
+	// Changing mode of PTA0 stops the data line working
+	// PORT_HAL_SetMuxMode(PORTA_BASE, 0, kPortMuxAlt2);
+
+	//CLOCK_SYS_TPM initialised in DRV_INIT
+	TPM_DRV_Init(1U, (tpm_general_config_t *)&tpmConfig);
+	TPM_DRV_Init(0U, (tpm_general_config_t *)&tpmConfig);
+	TPM_DRV_SetClock(0U, kTpmClockSourceModuleMCGIRCLK, kTpmDividedBy1);
+	TPM_DRV_SetClock(1U, kTpmClockSourceModuleMCGIRCLK, kTpmDividedBy1);
+}
+
+bool startPWM(bool tpmdev, bool tpmchannel, uint8_t dutycycle, int freq)
+{
+	static tpm_pwm_param_t pwmSettings[] = {
+		{	//TPM0_CH0
+			.mode = kTpmEdgeAlignedPWM,
+			.edgeMode = kTpmHighTrue,
+			.uFrequencyHZ = 400,
+			.uDutyCyclePercent = 100,
+		},
+		{	//TPM0_CH1
+			.mode = kTpmEdgeAlignedPWM,
+			.edgeMode = kTpmHighTrue,
+			.uFrequencyHZ = 400,
+			.uDutyCyclePercent = 100,
+		}
+	};
+	pwmSettings[tpmchannel].uDutyCyclePercent = dutycycle;
+	pwmSettings[tpmchannel].uFrequencyHZ = freq;
+	return TPM_DRV_PwmStart(tpmdev, (tpm_pwm_param_t *)&pwmSettings[tpmchannel], tpmchannel);
+
+
 }
 
 void enableI2Cpins(uint16_t pullupValue)
@@ -885,20 +917,18 @@ int main(void)
 
 
 	// initialise screen
-	devSSD1331init();
-	enableI2Cpins(menuI2cPullupValue);
+	// devSSD1331init();
+	// enableI2Cpins(menuI2cPullupValue);
 	enablePWMpins();
-	pwmParam.mode = kTpmEdgeAlignedPWM;
-    pwmParam.edgeMode = kTpmHighTrue;
-    pwmParam.uFrequencyHZ = 5000;
-	pwmParam.uDutyCyclePercent = 0;
-	SEGGER_RTT_WriteString(0, "Getting to PWM");
-	TPM_DRV_PwmStart(1, (tpm_pwm_param_t *)&pwmParam, 1);
 	while (1)
 	{
-		// GPIO_DRV_SetPinOutput(GPIO_MAKE_PIN(HW_GPIOB, 13));
-		// OSA_TimeDelay(1000);
-		// GPIO_DRV_ClearPinOutput(GPIO_MAKE_PIN(HW_GPIOB, 13));
+		for(char i=0; i<2; i++){
+			for(char j=0; j<2; j++){
+				if (!startPWM(i,j,95,100)){
+					SEGGER_RTT_printf(0, "PWM FAILED TPM%d CH%d\n", i, j);
+				}
+			}
+		};
 		/*
 		 *	Do not, e.g., lowPowerPinStates() on each iteration, because we actually
 		 *	want to use menu to progressiveley change the machine state with various
