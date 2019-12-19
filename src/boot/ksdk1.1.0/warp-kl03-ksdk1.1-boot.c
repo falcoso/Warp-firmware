@@ -119,6 +119,7 @@ void 	powerupAllSensors(void);
 uint16_t readDoubleHexByte(void);
 uint8_t	readHexByte(void);
 int		read4digits(void);
+uint8_t read3digits();
 void 	printAllSensors(bool printHeadersAndCalibration,
 						bool hexModeFlag,
 						int menuDelayBetweenEachRun,
@@ -924,6 +925,10 @@ int main(void)
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 		SEGGER_RTT_WriteString(0, "\r- '1': write to INA219 Register\n");
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
+		SEGGER_RTT_WriteString(0, "\r- '2': set PWM Duty Cycle\n");
+		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
+		SEGGER_RTT_WriteString(0, "\r- '3': set PWM Frequency\n");
+		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 		SEGGER_RTT_WriteString(0, "\r- 'a': set default sensor\n");
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 		SEGGER_RTT_WriteString(0, "\r- 'b': set I2C baud rate.\n");
@@ -985,6 +990,29 @@ int main(void)
 #endif
 					}
 				}
+				break;
+			}
+
+			// set duty cycle
+			case '2':
+			{
+				bool channel;
+				SEGGER_RTT_WriteString(0, "\r\tSelect TPM Channel (0|1) > ");
+				channel = SEGGER_RTT_WaitKey() - '0';
+				SEGGER_RTT_WriteString(0, "\r\tSet Duty Cycle (000-100%%) > ");
+				pwmSettings[channel].uDutyCyclePercent = read3digits();
+				break;
+
+			}
+
+			// set freq
+			case '3':
+			{
+				bool channel;
+				SEGGER_RTT_WriteString(0, "\r\tSelect TPM Channel (0|1) > ");
+				channel = SEGGER_RTT_WaitKey() - '0';
+				SEGGER_RTT_WriteString(0, "\r\tSet PWM Frequency (0000) > ");
+				pwmSettings[channel].uFrequencyHZ = read4digits();
 				break;
 			}
 
@@ -1526,6 +1554,17 @@ int read4digits(void)
 	digit4 = SEGGER_RTT_WaitKey();
 
 	return (digit1 - '0')*1000 + (digit2 - '0')*100 + (digit3 - '0')*10 + (digit4 - '0');
+}
+
+uint8_t read3digits()
+{
+	uint8_t		digit1, digit2, digit3;
+
+	digit1 = SEGGER_RTT_WaitKey();
+	digit2 = SEGGER_RTT_WaitKey();
+	digit3 = SEGGER_RTT_WaitKey();
+
+	return (digit1 - '0')*100 + (digit2 - '0')*10 + (digit3 - '0');
 }
 
 
