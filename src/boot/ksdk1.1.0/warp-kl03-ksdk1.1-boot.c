@@ -872,15 +872,29 @@ int main(void)
 	// devSSD1331init();
 	// enableI2Cpins(menuI2cPullupValue);
 	enablePWMpins();
+
+
+	/*
+	* For some reason PWM needs to be started on TPM1 as well as TPM0 for TPM0 to
+	* output anything, despite the fact that nothing comes out of TPM1 no matter
+	* how the output pins are configured. Interestingly the clock doesn't need
+	* to be set for TPM1 however for this to work.
+	*/
+	if (!TPM_DRV_PwmStart(1, (tpm_pwm_param_t *)&pwmSettings[0], 1)){
+		SEGGER_RTT_printf(0, "PWM FAILED TPM1 CH%d\n", 1);
+	}
+
+	SEGGER_RTT_printf(0, "LPTMR Return: %d\n", LPTMR_DRV_Start(0));
 	while (1)
 	{
-		for(char i=0; i<2; i++){
-			for(char j=0; j<2; j++){
-				if (!TPM_DRV_PwmStart(i, (tpm_pwm_param_t *)&pwmSettings[j], j)){
-					SEGGER_RTT_printf(0, "PWM FAILED TPM%d CH%d\n", i, j);
-				}
-			}
-		};
+		if (!TPM_DRV_PwmStart(0, (tpm_pwm_param_t *)&pwmSettings[0], 0)){
+			SEGGER_RTT_printf(0, "PWM FAILED TPM0 CH%d\n", 0);
+		}
+		if (!TPM_DRV_PwmStart(0, (tpm_pwm_param_t *)&pwmSettings[1], 1)){
+			SEGGER_RTT_printf(0, "PWM FAILED TPM0 CH%d\n", 1);
+		}
+
+		SEGGER_RTT_printf(0, "Timer O/P: %d", LPTMR_DRV_GetCurrentTimeUs(0));
 		/*
 		 *	Do not, e.g., lowPowerPinStates() on each iteration, because we actually
 		 *	want to use menu to progressiveley change the machine state with various
