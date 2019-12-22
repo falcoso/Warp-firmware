@@ -63,6 +63,7 @@
 #include "devMMA8451Q.h"
 #include "fsl_tpm_driver.h"
 #include "PWMdriver.h"
+#include "PID.h"
 
 #define WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
 #define	kWarpConstantStringI2cFailure		"\rI2C failed, reg 0x%02x, code %d\n"
@@ -870,7 +871,7 @@ int main(void)
 
 	// initialise screen
 	// devSSD1331init();
-	// enableI2Cpins(menuI2cPullupValue);
+	enableI2Cpins(menuI2cPullupValue);
 	enablePWMpins();
 	SEGGER_RTT_printf(0, "LPTMR Return: %d\n", LPTMR_DRV_Start(0));
 	while (1)
