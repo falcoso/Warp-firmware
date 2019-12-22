@@ -19,7 +19,7 @@ volatile lptmr_state_t lptmrState; // set when the timer is initialised
 
 volatile tpm_general_config_t tpmConfig = {
 		.isDBGMode = false,
-		.isGlobalTimeBase = true,
+		.isGlobalTimeBase = false,
 		.isTriggerMode = false,
 		.isStopCountOnOveflow = false,
 		.isCountReloadOnTrig = false,
