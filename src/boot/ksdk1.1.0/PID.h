@@ -11,7 +11,7 @@ typedef struct Controller
 } controller_t;
 
 controller_t pidSettings = {
-    .Kp = 10,
+    .Kp = 0.1,
     .Ki = 0,
     .Kd = 0,
     .target = 0.0,

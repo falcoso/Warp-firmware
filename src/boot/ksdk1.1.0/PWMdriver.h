@@ -1,8 +1,11 @@
 #include "fsl_tpm_driver.h"
 #include "fsl_lptmr_hal.h"
 #include "fsl_lptmr_driver.h"
+#include "SEGGER_RTT.h"
 
 void enablePWMpins();
+
+void motorControl(int8_t level);
 
 const lptmr_user_config_t lptmrConfig = {
     .timerMode = kLptmrTimerModeTimeCounter,

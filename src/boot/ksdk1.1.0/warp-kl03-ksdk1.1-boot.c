@@ -66,6 +66,7 @@
 #include "PID.h"
 
 #define WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
+#define LOOP_READINGS
 #define	kWarpConstantStringI2cFailure		"\rI2C failed, reg 0x%02x, code %d\n"
 #define	kWarpConstantStringErrorInvalidVoltage	"\rInvalid supply voltage [%d] mV!"
 #define	kWarpConstantStringErrorSanity		"\rSanity check failed!"
@@ -670,13 +671,14 @@ void dumpProcessorState(void){}
 
 int main(void)
 {
-	uint8_t					key;
 	WarpSensorDevice			menuTargetSensor = kWarpSensorBMX055accel;
 	volatile WarpI2CDeviceState *		menuI2cDevice = NULL;
 	uint16_t				menuI2cPullupValue = 32768;
+#ifndef LOOP_READINGS
+	uint8_t					key;
 	uint8_t					menuRegisterAddress = 0x00;
 	uint16_t				menuSupplyVoltage = 1800;
-
+#endif
 
 	rtc_datetime_t				warpBootDate;
 
@@ -873,14 +875,33 @@ int main(void)
 	// devSSD1331init();
 	enableI2Cpins(menuI2cPullupValue);
 	enablePWMpins();
+	configureSensorMMA8451Q(0x00,/* Payload: Disable FIFO */
+							0x01,/* Normal read 8bit, 800Hz, normal, active mode */
+							menuI2cPullupValue
+							);
 	SEGGER_RTT_printf(0, "LPTMR Return: %d\n", LPTMR_DRV_Start(0));
+	for (uint8_t i=0; i<2; i++)
+	{
+		if (!TPM_DRV_PwmStart(0, (tpm_pwm_param_t *)&pwmSettings[i], i))
+			SEGGER_RTT_printf(0, "PWM FAILED TPM0 CH%d\n", i);
+	}
+
+#ifdef LOOP_READINGS
+	while(1)
+	{
+		collect_readings(&pidSettings);
+		motorControl(pid_op(&pidSettings));
+	}
+#else
+
 	while (1)
 	{
-		for (char i=0; i<2; i++){
-			if (!TPM_DRV_PwmStart(0, (tpm_pwm_param_t *)&pwmSettings[i], i)){
+		for (uint8_t i=0; i<2; i++)
+		{
+			if (!TPM_DRV_PwmStart(0, (tpm_pwm_param_t *)&pwmSettings[i], i))
 				SEGGER_RTT_printf(0, "PWM FAILED TPM0 CH%d\n", i);
-			}
 		}
+
 
 		SEGGER_RTT_printf(0, "Timer O/P: %X", LPTMR_DRV_GetCurrentTimeUs(0));
 		/*
@@ -898,7 +919,7 @@ int main(void)
 		SEGGER_RTT_WriteString(0, "\r[  \t\t\t\t      Cambridge / Physcomplab   \t\t\t\t  ]\n\n");
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 
-#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
+	#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
 		SEGGER_RTT_printf(0, "\r\tSupply=%dmV,\tDefault Target Read Register=0x%02x\n",
 								menuSupplyVoltage, menuRegisterAddress);
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
@@ -918,10 +939,10 @@ int main(void)
 
 		SEGGER_RTT_printf(0, "\r\t%ds in RTC Handler to-date,\t%d Pmgr Errors\n", gWarpSleeptimeSeconds, powerManagerCallbackStructure.errorCount);
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-#else
+	#else
 		SEGGER_RTT_WriteString(0, "\r\n\n\t\tWARNING: SEGGER_RTT_printf disabled in this firmware build.\n\t\tOnly showing output that does not require value formatting.\n\n");
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-#endif
+	#endif
 
 		SEGGER_RTT_WriteString(0, "\rSelect:\n");
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
@@ -942,10 +963,10 @@ int main(void)
 		SEGGER_RTT_WriteString(0, "\r- 'e': set default register address.\n");
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 
-#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
+	#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
 		SEGGER_RTT_printf(0, "\r- 'j': repeat read reg 0x%02x on sensor #%d.\n", menuRegisterAddress, menuTargetSensor);
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-#endif
+	#endif
 		SEGGER_RTT_WriteString(0, "\r- 'z': dump all sensors data.\n");
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 
@@ -987,9 +1008,9 @@ int main(void)
 					}
 					default:
 					{
-#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
+	#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
 						SEGGER_RTT_printf(0, "\r\tInvalid selection '%c' !\n", key);
-#endif
+	#endif
 					}
 				}
 				break;
@@ -1049,9 +1070,9 @@ int main(void)
 					}
 					default:
 					{
-#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
+	#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
 						SEGGER_RTT_printf(0, "\r\tInvalid selection '%c' !\n", key);
-#endif
+	#endif
 					}
 				}
 
@@ -1070,9 +1091,9 @@ int main(void)
 					gWarpI2cBaudRateKbps = 10000;
 				}
 
-#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
+	#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
 				SEGGER_RTT_printf(0, "\r\n\tI2C baud rate set to %d kb/s", gWarpI2cBaudRateKbps);
-#endif
+	#endif
 
 				break;
 			}
@@ -1089,9 +1110,9 @@ int main(void)
 					gWarpSpiBaudRateKbps = 10000;
 				}
 
-#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
+	#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
 				SEGGER_RTT_printf(0, "\r\n\tSPI baud rate: %d kb/s", gWarpSpiBaudRateKbps);
-#endif
+	#endif
 
 				break;
 			}
@@ -1101,9 +1122,9 @@ int main(void)
 			{
 				SEGGER_RTT_WriteString(0, "\r\n\tSet UART baud rate in kbps (e.g., '0001')> ");
 				gWarpUartBaudRateKbps = read4digits();
-#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
+	#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
 				SEGGER_RTT_printf(0, "\r\n\tUART baud rate: %d kb/s", gWarpUartBaudRateKbps);
-#endif
+	#endif
 
 				break;
 			}
@@ -1113,9 +1134,9 @@ int main(void)
 			{
 				SEGGER_RTT_WriteString(0, "\r\n\tEnter 2-nybble register hex address (e.g., '3e')> ");
 				menuRegisterAddress = readHexByte();
-#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
+	#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
 				SEGGER_RTT_printf(0, "\r\n\tEntered [0x%02x].\n\n", menuRegisterAddress);
-#endif
+	#endif
 
 				break;
 			}
@@ -1128,11 +1149,11 @@ int main(void)
 				int		adaptiveSssupplyMaxMillivolts;
 				uint8_t		referenceByte;
 
-#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
+	#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
 				SEGGER_RTT_printf(0, "\r\n\tAuto-increment from base address 0x%02x? ['0' | '1']> ", menuRegisterAddress);
 				#else
 				SEGGER_RTT_WriteString(0, "\r\n\tChunk reads per address (e.g., '1')> ");
-#endif
+	#endif
 
 				autoIncrement = SEGGER_RTT_WaitKey() - '0';
 
@@ -1154,10 +1175,10 @@ int main(void)
 				SEGGER_RTT_WriteString(0, "\r\n\tReference byte for comparisons (e.g., '3e')> ");
 				referenceByte = readHexByte();
 
-#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
+	#ifdef WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
 				SEGGER_RTT_printf(0, "\r\n\tRepeating dev%d @ 0x%02x, reps=%d, pull=%d, delay=%dms:\n\n",
 					menuTargetSensor, menuRegisterAddress, repetitionsPerAddress, menuI2cPullupValue, spinDelay);
-#endif
+	#endif
 
 				repeatRegisterReadForDeviceAndAddress(	menuTargetSensor /*warpSensorDevice*/,
 									menuRegisterAddress /*baseAddress */,
@@ -1219,6 +1240,7 @@ int main(void)
 		}
 	}
 
+#endif
 	return 0;
 }
 
