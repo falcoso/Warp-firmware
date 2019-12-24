@@ -58,6 +58,7 @@
 #include "devSSD1331.h"
 
 #define WARP_FRDMKL03
+#define LOOP_READINGS
 
 #include "devINA219.h"
 #include "devMMA8451Q.h"
@@ -66,7 +67,6 @@
 #include "PID.h"
 
 #define WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
-#define LOOP_READINGS
 #define	kWarpConstantStringI2cFailure		"\rI2C failed, reg 0x%02x, code %d\n"
 #define	kWarpConstantStringErrorInvalidVoltage	"\rInvalid supply voltage [%d] mV!"
 #define	kWarpConstantStringErrorSanity		"\rSanity check failed!"
@@ -671,10 +671,10 @@ void dumpProcessorState(void){}
 
 int main(void)
 {
-	WarpSensorDevice			menuTargetSensor = kWarpSensorBMX055accel;
-	volatile WarpI2CDeviceState *		menuI2cDevice = NULL;
 	uint16_t				menuI2cPullupValue = 32768;
 #ifndef LOOP_READINGS
+	WarpSensorDevice			menuTargetSensor = kWarpSensorBMX055accel;
+	volatile WarpI2CDeviceState *		menuI2cDevice = NULL;
 	uint8_t					key;
 	uint8_t					menuRegisterAddress = 0x00;
 	uint16_t				menuSupplyVoltage = 1800;
@@ -861,7 +861,7 @@ int main(void)
 #ifdef WARP_BUILD_BOOT_TO_CSVSTREAM
 	//	Force to printAllSensors
 	gWarpI2cBaudRateKbps = 300;
-	warpSetLowPowerMode(kWarpPowerModeRUN, 0 /* sleep seconds : irrelevant here */);
+	// warpSetLowPowerMode(kWarpPowerModeRUN, 0 /* sleep seconds : irrelevant here */);
 	enableSssupply(3000);
 	enableI2Cpins(menuI2cPullupValue);
 	printAllSensors(false /* printHeadersAndCalibration */, false /* hexModeFlag */, 0 /* menuDelayBetweenEachRun */, menuI2cPullupValue);
@@ -880,29 +880,18 @@ int main(void)
 							menuI2cPullupValue
 							);
 	SEGGER_RTT_printf(0, "LPTMR Return: %d\n", LPTMR_DRV_Start(0));
-	for (uint8_t i=0; i<2; i++)
-	{
-		if (!TPM_DRV_PwmStart(0, (tpm_pwm_param_t *)&pwmSettings[i], i))
-			SEGGER_RTT_printf(0, "PWM FAILED TPM0 CH%d\n", i);
-	}
 
 #ifdef LOOP_READINGS
 	while(1)
 	{
 		collect_readings(&pidSettings);
 		motorControl(pid_op(&pidSettings));
+		// OSA_TimeDelay(50);
 	}
 #else
 
 	while (1)
 	{
-		for (uint8_t i=0; i<2; i++)
-		{
-			if (!TPM_DRV_PwmStart(0, (tpm_pwm_param_t *)&pwmSettings[i], i))
-				SEGGER_RTT_printf(0, "PWM FAILED TPM0 CH%d\n", i);
-		}
-
-
 		SEGGER_RTT_printf(0, "Timer O/P: %X", LPTMR_DRV_GetCurrentTimeUs(0));
 		/*
 		 *	Do not, e.g., lowPowerPinStates() on each iteration, because we actually
@@ -950,8 +939,8 @@ int main(void)
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 		SEGGER_RTT_WriteString(0, "\r- '2': set PWM Duty Cycle\n");
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
-		SEGGER_RTT_WriteString(0, "\r- '3': set PWM Frequency\n");
-		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
+		// SEGGER_RTT_WriteString(0, "\r- '3': set PWM Frequency\n");
+		// OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 		SEGGER_RTT_WriteString(0, "\r- 'a': set default sensor\n");
 		OSA_TimeDelay(gWarpMenuPrintDelayMilliseconds);
 		SEGGER_RTT_WriteString(0, "\r- 'b': set I2C baud rate.\n");
@@ -1023,21 +1012,21 @@ int main(void)
 				SEGGER_RTT_WriteString(0, "\r\tSelect TPM Channel (0|1) > ");
 				channel = SEGGER_RTT_WaitKey() - '0';
 				SEGGER_RTT_WriteString(0, "\r\tSet Duty Cycle (000-100%%) > ");
-				pwmSettings[channel].uDutyCyclePercent = read3digits();
+				motorControl(read3digits());
 				break;
 
 			}
 
 			// set freq
-			case '3':
-			{
-				bool channel;
-				SEGGER_RTT_WriteString(0, "\r\tSelect TPM Channel (0|1) > ");
-				channel = SEGGER_RTT_WaitKey() - '0';
-				SEGGER_RTT_WriteString(0, "\r\tSet PWM Frequency (0000) > ");
-				pwmSettings[channel].uFrequencyHZ = read4digits();
-				break;
-			}
+			// case '3':
+			// {
+			// 	bool channel;
+			// 	SEGGER_RTT_WriteString(0, "\r\tSelect TPM Channel (0|1) > ");
+			// 	channel = SEGGER_RTT_WaitKey() - '0';
+			// 	SEGGER_RTT_WriteString(0, "\r\tSet PWM Frequency (0000) > ");
+			// 	pwmSettings[channel].uFrequencyHZ = read4digits();
+			// 	break;
+			// }
 
 			// Select Sensor - modified to also write to INA219 registers
 			case 'a':

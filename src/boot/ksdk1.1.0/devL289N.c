@@ -9,6 +9,22 @@ enum
 	kL298Nreverse2 = GPIO_MAKE_PIN(HW_GPIOA, 7),
 };
 
+const tpm_general_config_t tpmConfig = {
+		.isDBGMode = false,
+		.isGlobalTimeBase = false,
+		.isTriggerMode = false,
+		.isStopCountOnOveflow = false,
+		.isCountReloadOnTrig = false,
+		.triggerSource = 0
+};
+
+volatile tpm_pwm_param_t pwmSettings = {
+		.mode = kTpmEdgeAlignedPWM,
+		.edgeMode = kTpmHighTrue,
+		.uFrequencyHZ = 400,
+		.uDutyCyclePercent = 99,
+};
+
 
 void enablePWMpins()
 {
@@ -20,12 +36,26 @@ void enablePWMpins()
 	PORT_HAL_SetMuxMode(PORTB_BASE, 11, kPortMuxAlt2);
 	TPM_DRV_Init(0U, (tpm_general_config_t *)&tpmConfig);
 	TPM_DRV_SetClock(0U, kTpmClockSourceModuleMCGIRCLK, kTpmDividedBy1);
+	if (!TPM_DRV_PwmStart(0, (tpm_pwm_param_t *)&pwmSettings, 0))
+		SEGGER_RTT_printf(0, "PWM FAILED TPM0 CH%d\n", 0);
 
 	// Changing mode of PTA0 stops the data line working
 	// PORT_HAL_SetMuxMode(PORTA_BASE, 0, kPortMuxAlt2);
 	// PORT_HAL_SetMuxMode(PORTB_BASE, 13, kPortMuxAlt2);
 	// TPM_DRV_Init(1U, (tpm_general_config_t *)&tpmConfig);
 	// TPM_DRV_SetClock(1U, kTpmClockSourceModuleMCGIRCLK, kTpmDividedBy1);
+}
+
+void setDutyCycle(uint16_t level, bool devtpm, bool chn)
+{
+	uint16_t uMod, uCnv;
+	uint32_t tpmBaseAddr = g_tpmBaseAddr[devtpm];
+
+	pwmSettings.uDutyCyclePercent = level;
+
+	uMod = TPM_DRV_GetClock(devtpm) / pwmSettings.uFrequencyHZ - 1;
+	uCnv = uMod * pwmSettings.uDutyCyclePercent / 100;
+	TPM_HAL_SetChnCountVal(tpmBaseAddr, chn, uCnv);
 }
 
 void motorControl(int8_t level)
@@ -35,7 +65,7 @@ void motorControl(int8_t level)
 	{
 		GPIO_DRV_SetPinOutput(kL298Nreverse1);
 		GPIO_DRV_SetPinOutput(kL298Nreverse2);
-		level = 100+level;
+		level += 100;
 	}
 	else
 	{
@@ -44,15 +74,6 @@ void motorControl(int8_t level)
 	}
 
 	// modify duty cycle and reset PWM
-	for (uint8_t i=0; i<2; i++)
-	{
-		pwmSettings[i].uDutyCyclePercent = level;
-		SEGGER_RTT_printf(0, "CH%d Duty Cycle\n", pwmSettings[i].uDutyCyclePercent);
-	}
-
-	for (uint8_t i=0; i<2; i++)
-	{
-		if (!TPM_DRV_PwmStart(0, (tpm_pwm_param_t *)&pwmSettings[i], i))
-			SEGGER_RTT_printf(0, "PWM FAILED TPM0 CH%d\n", i);
-	}
+	pwmSettings.uDutyCyclePercent = level;
+	setDutyCycle(level, 0, 0);
 }
