@@ -49,7 +49,7 @@
 #include "fsl_power_manager.h"
 #include "fsl_mcglite_hal.h"
 #include "fsl_port_hal.h"
-#include "fsl_lpuart_driver.h"
+// #include "fsl_lpuart_driver.h"
 
 #include "gpio_pins.h"
 #include "SEGGER_RTT.h"
@@ -65,6 +65,7 @@
 #include "fsl_tpm_driver.h"
 #include "PWMdriver.h"
 #include "PID.h"
+#include "math.h"
 
 #define WARP_BUILD_ENABLE_SEGGER_RTT_PRINTF
 #define	kWarpConstantStringI2cFailure		"\rI2C failed, reg 0x%02x, code %d\n"
@@ -78,8 +79,8 @@ volatile WarpI2CDeviceState			deviceMMA8451QState;
 volatile i2c_master_state_t			i2cMasterState;
 volatile spi_master_state_t			spiMasterState;
 volatile spi_master_user_config_t	spiUserConfig;
-volatile lpuart_user_config_t 		lpuartUserConfig;
-volatile lpuart_state_t 			lpuartState;
+// volatile lpuart_user_config_t 		lpuartUserConfig;
+// volatile lpuart_state_t 			lpuartState;
 
 
 volatile uint32_t			gWarpI2cBaudRateKbps		= 200;
@@ -118,10 +119,13 @@ void 	enableSssupply(uint16_t voltageMillivolts);
 void 	disableSssupply(void);
 void 	activateAllLowPowerSensorModes(bool verbose);
 void 	powerupAllSensors(void);
+#ifndef LOOP_READINGS
 uint16_t readDoubleHexByte(void);
 uint8_t	readHexByte(void);
+#endif
 int		read4digits(void);
 uint8_t read3digits();
+float read3float();
 void 	printAllSensors(bool printHeadersAndCalibration,
 						bool hexModeFlag,
 						int menuDelayBetweenEachRun,
@@ -131,7 +135,7 @@ void 	printAllSensors(bool printHeadersAndCalibration,
 WarpStatus	writeByteToI2cDeviceRegister(uint8_t i2cAddress, bool sendCommandByte, uint8_t commandByte, bool sendPayloadByte, uint8_t payloadByte);
 WarpStatus	writeBytesToSpi(uint8_t *  payloadBytes, int payloadLength);
 
-void		warpLowPowerSecondsSleep(uint32_t sleepSeconds, bool forceAllPinsIntoLowPowerState);
+// void		warpLowPowerSecondsSleep(uint32_t sleepSeconds, bool forceAllPinsIntoLowPowerState);
 
 
 
@@ -148,6 +152,12 @@ static clock_manager_callback_user_config_t *	clockCallbackTable[] =
 									{
 										&clockManagerCallbackUserlevelStructure
 									};
+
+void LPTMR_Interrupt()
+{
+	SEGGER_RTT_WriteString(0, "INTERRUPT TRIGGERED!");
+}
+
 
 clock_manager_error_code_t
 clockManagerCallbackRoutine(clock_notify_struct_t *  notify, void *  callbackData)
@@ -215,53 +225,54 @@ power_manager_error_code_t callback0(power_manager_notify_struct_t *  notify,
  */
 
 
-void sleepUntilReset(void)
-{
-	while (1)
-	{
-		warpLowPowerSecondsSleep(1, false /* forceAllPinsIntoLowPowerState */);
-		warpLowPowerSecondsSleep(60, true /* forceAllPinsIntoLowPowerState */);
-	}
-}
-
-void enableLPUARTpins(void)
-{
-	/*	Enable UART CLOCK */
-	CLOCK_SYS_EnableLpuartClock(0);
-
-	/*
-	*	set UART pin association
-	*	see page 99 in https://www.nxp.com/docs/en/reference-manual/KL03P24M48SF0RM.pdf
-	*/
-
-	//	Initialize LPUART0. See KSDK13APIRM.pdf section 40.4.3, page 1353
-	lpuartUserConfig.baudRate = 115;
-	lpuartUserConfig.parityMode = kLpuartParityDisabled;
-	lpuartUserConfig.stopBitCount = kLpuartOneStopBit;
-	lpuartUserConfig.bitCountPerChar = kLpuart8BitsPerChar;
-
-	LPUART_DRV_Init(0,(lpuart_state_t *)&lpuartState,(lpuart_user_config_t *)&lpuartUserConfig);
-
-}
-
-
-void disableLPUARTpins(void)
-{
-	//	LPUART deinit
-	LPUART_DRV_Deinit(0);
-
-	/*	Warp KL03_UART_HCI_RX	--> PTB4 (GPIO)	*/
-	PORT_HAL_SetMuxMode(PORTB_BASE, 4, kPortMuxAsGpio);
-	/*	Warp KL03_UART_HCI_TX	--> PTB3 (GPIO) */
-	PORT_HAL_SetMuxMode(PORTB_BASE, 3, kPortMuxAsGpio);
-
-	GPIO_DRV_ClearPinOutput(kWarpPinLPUART_HCI_TX);
-	GPIO_DRV_ClearPinOutput(kWarpPinLPUART_HCI_RX);
-
-	/* Disable LPUART CLOCK */
-	CLOCK_SYS_DisableLpuartClock(0);
-
-}
+// void sleepUntilReset(void)
+// {
+// 	while (1)
+// 	{
+// 		warpLowPowerSecondsSleep(1, false /* forceAllPinsIntoLowPowerState */);
+// 		warpLowPowerSecondsSleep(60, true /* forceAllPinsIntoLowPowerState */);
+// 	}
+// }
+//  #ifndef LOOP_READINGS
+// void enableLPUARTpins(void)
+// {
+// 	/*	Enable UART CLOCK */
+// 	CLOCK_SYS_EnableLpuartClock(0);
+//
+// 	/*
+// 	*	set UART pin association
+// 	*	see page 99 in https://www.nxp.com/docs/en/reference-manual/KL03P24M48SF0RM.pdf
+// 	*/
+//
+// 	//	Initialize LPUART0. See KSDK13APIRM.pdf section 40.4.3, page 1353
+// 	lpuartUserConfig.baudRate = 115;
+// 	lpuartUserConfig.parityMode = kLpuartParityDisabled;
+// 	lpuartUserConfig.stopBitCount = kLpuartOneStopBit;
+// 	lpuartUserConfig.bitCountPerChar = kLpuart8BitsPerChar;
+//
+// 	LPUART_DRV_Init(0,(lpuart_state_t *)&lpuartState,(lpuart_user_config_t *)&lpuartUserConfig);
+//
+// }
+//
+//
+// void disableLPUARTpins(void)
+// {
+// 	//	LPUART deinit
+// 	LPUART_DRV_Deinit(0);
+//
+// 	/*	Warp KL03_UART_HCI_RX	--> PTB4 (GPIO)	*/
+// 	PORT_HAL_SetMuxMode(PORTB_BASE, 4, kPortMuxAsGpio);
+// 	/*	Warp KL03_UART_HCI_TX	--> PTB3 (GPIO) */
+// 	PORT_HAL_SetMuxMode(PORTB_BASE, 3, kPortMuxAsGpio);
+//
+// 	GPIO_DRV_ClearPinOutput(kWarpPinLPUART_HCI_TX);
+// 	GPIO_DRV_ClearPinOutput(kWarpPinLPUART_HCI_RX);
+//
+// 	/* Disable LPUART CLOCK */
+// 	CLOCK_SYS_DisableLpuartClock(0);
+//
+// }
+// #endif
 
 void enableSPIpins(void)
 {
@@ -649,21 +660,21 @@ void disableSssupply(void)
 
 
 
-void warpLowPowerSecondsSleep(uint32_t sleepSeconds, bool forceAllPinsIntoLowPowerState)
-{
-	/*
-	 *	Set all pins into low-power states. We don't just disable all pins,
-	 *	as the various devices hanging off will be left in higher power draw
-	 *	state. And manuals say set pins to output to reduce power.
-	 */
-	if (forceAllPinsIntoLowPowerState)
-	{
-		lowPowerPinStates();
-	}
-
-	warpSetLowPowerMode(kWarpPowerModeVLPR, 0);
-	warpSetLowPowerMode(kWarpPowerModeVLPS, sleepSeconds);
-}
+// void warpLowPowerSecondsSleep(uint32_t sleepSeconds, bool forceAllPinsIntoLowPowerState)
+// {
+// 	/*
+// 	 *	Set all pins into low-power states. We don't just disable all pins,
+// 	 *	as the various devices hanging off will be left in higher power draw
+// 	 *	state. And manuals say set pins to output to reduce power.
+// 	 */
+// 	if (forceAllPinsIntoLowPowerState)
+// 	{
+// 		lowPowerPinStates();
+// 	}
+//
+// 	warpSetLowPowerMode(kWarpPowerModeVLPR, 0);
+// 	warpSetLowPowerMode(kWarpPowerModeVLPS, sleepSeconds);
+// }
 
 
 void printPinDirections(void){}
@@ -680,7 +691,7 @@ int main(void)
 	uint16_t				menuSupplyVoltage = 1800;
 #endif
 
-	rtc_datetime_t				warpBootDate;
+	// rtc_datetime_t				warpBootDate;
 
 	power_manager_user_config_t		warpPowerModeWaitConfig;
 	power_manager_user_config_t		warpPowerModeStopConfig;
@@ -766,17 +777,17 @@ int main(void)
 			);
 	CLOCK_SYS_UpdateConfiguration(CLOCK_CONFIG_INDEX_FOR_RUN, kClockManagerPolicyForcible);
 
-	//	Initialize RTC Driver
-	RTC_DRV_Init(0);
-
-	//	Set initial date to 1st January 2016 00:00, and set date via RTC driver
-	warpBootDate.year	= 2016U;
-	warpBootDate.month	= 1U;
-	warpBootDate.day	= 1U;
-	warpBootDate.hour	= 0U;
-	warpBootDate.minute	= 0U;
-	warpBootDate.second	= 0U;
-	RTC_DRV_SetDatetime(0, &warpBootDate);
+	// //	Initialize RTC Driver
+	// RTC_DRV_Init(0);
+	//
+	// //	Set initial date to 1st January 2016 00:00, and set date via RTC driver
+	// warpBootDate.year	= 2016U;
+	// warpBootDate.month	= 1U;
+	// warpBootDate.day	= 1U;
+	// warpBootDate.hour	= 0U;
+	// warpBootDate.minute	= 0U;
+	// warpBootDate.second	= 0U;
+	// RTC_DRV_SetDatetime(0, &warpBootDate);
 
 	//	Setup Power Manager Driver
 	memset(&powerManagerCallbackStructure, 0, sizeof(WarpPowerManagerCallbackStructure));
@@ -828,20 +839,6 @@ int main(void)
 	 */
 	lowPowerPinStates();
 
-	//	Toggle LED3 (kWarpPinSI4705_nRST)
-	GPIO_DRV_SetPinOutput(kWarpPinSI4705_nRST);
-	OSA_TimeDelay(200);
-	GPIO_DRV_ClearPinOutput(kWarpPinSI4705_nRST);
-	OSA_TimeDelay(200);
-	GPIO_DRV_SetPinOutput(kWarpPinSI4705_nRST);
-	OSA_TimeDelay(200);
-	GPIO_DRV_ClearPinOutput(kWarpPinSI4705_nRST);
-	OSA_TimeDelay(200);
-	GPIO_DRV_SetPinOutput(kWarpPinSI4705_nRST);
-	OSA_TimeDelay(200);
-	GPIO_DRV_ClearPinOutput(kWarpPinSI4705_nRST);
-
-
 
 	//	Initialize all the sensors
 	initINA219(0x40, &deviceINA219State);
@@ -879,14 +876,21 @@ int main(void)
 							0x01,/* Normal read 8bit, 800Hz, normal, active mode */
 							menuI2cPullupValue
 							);
-	SEGGER_RTT_printf(0, "LPTMR Return: %d\n", LPTMR_DRV_Start(0));
+	// SEGGER_RTT_printf(0, "LPTMR init Return: %d\n", LPTMR_DRV_Init(0, &lptmrConfig, &lptmrState));
+	SEGGER_RTT_printf(0, "LPTMR start Return: %d\n", LPTMR_DRV_Start(0));
+	// SEGGER_RTT_printf(0, "LPTMR callback return: %d\n", LPTMR_DRV_InstallCallback(0, LPTMR_Interrupt));
+	//
+	// LPTMR_DRV_SetTimerPeriodUs(0, 100);
 
 #ifdef LOOP_READINGS
+	// SEGGER_RTT_WriteString(0, "New Kp (4digitx1000)>>");
+	// pidSettings.Kp = (float)(read4digits() * 1000);
 	while(1)
 	{
-		collect_readings(&pidSettings);
-		motorControl(pid_op(&pidSettings));
-		// OSA_TimeDelay(50);
+		// collect_readings((controller_t*)&pidSettings);
+		// motorControl(pid_op((controller_t*)&pidSettings));
+		SEGGER_RTT_WriteString(0, "Wait in loop\n");
+		SEGGER_RTT_WaitKey();
 	}
 #else
 
@@ -1449,10 +1453,7 @@ void repeatRegisterReadForDeviceAndAddress(WarpSensorDevice warpSensorDevice,
 										   uint16_t adaptiveSssupplyMaxMillivolts,
 										   uint8_t referenceByte)
 {
-	if (warpSensorDevice != kWarpSensorADXL362)
-	{
-		enableI2Cpins(pullupValue);
-	}
+	enableI2Cpins(pullupValue);
 
 	switch (warpSensorDevice)
 	{
@@ -1506,15 +1507,11 @@ void repeatRegisterReadForDeviceAndAddress(WarpSensorDevice warpSensorDevice,
 #endif
 		}
 	}
-
-	if (warpSensorDevice != kWarpSensorADXL362)
-	{
 		disableI2Cpins();
-	}
 }
 
 
-
+#ifndef LOOP_READINGS
 int char2int(int character)
 {
 	if (character >= '0' && character <= '9')
@@ -1556,6 +1553,7 @@ uint8_t readHexByte(void)
 
 	return (char2int(topNybble) << 4) + char2int(bottomNybble);
 }
+#endif
 
 int read4digits(void)
 {
@@ -1578,6 +1576,22 @@ uint8_t read3digits()
 	digit3 = SEGGER_RTT_WaitKey();
 
 	return (digit1 - '0')*100 + (digit2 - '0')*10 + (digit3 - '0');
+}
+
+
+float read3float()
+{
+	uint8_t	digit1, digit2, digit3, sign, expo;
+
+	digit1 = SEGGER_RTT_WaitKey();
+	digit2 = SEGGER_RTT_WaitKey();
+	digit3 = SEGGER_RTT_WaitKey();
+	sign = SEGGER_RTT_WaitKey();
+	expo = SEGGER_RTT_WaitKey();
+	if (sign == '+')
+		return ((digit1 - '0') + (digit2 - '0')*0.1 + (digit3 - '0')*0.01)*pow(10,(expo-'0'));
+	else
+		return ((digit1 - '0') + (digit2 - '0')*0.1 + (digit3 - '0')*0.01)*pow(10,-(expo-'0'));
 }
 
 

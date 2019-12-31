@@ -22,7 +22,7 @@ volatile tpm_pwm_param_t pwmSettings = {
 		.mode = kTpmEdgeAlignedPWM,
 		.edgeMode = kTpmHighTrue,
 		.uFrequencyHZ = 400,
-		.uDutyCyclePercent = 99,
+		.uDutyCyclePercent = 0,
 };
 
 

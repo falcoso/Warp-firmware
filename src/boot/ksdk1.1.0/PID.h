@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "math.h"
 
 typedef struct Controller
 {
@@ -10,11 +11,11 @@ typedef struct Controller
     int16_t accel[2];
 } controller_t;
 
-controller_t pidSettings = {
-    .Kp = 0.1,
-    .Ki = 0,
-    .Kd = 0,
-    .target = 0.0,
+volatile controller_t pidSettings = {
+    .Kp = 1000,
+    .Ki = 700,
+    .Kd = 1,
+    .target = -(5.0/180)*M_PI,
     .real = 0.0,
     .accel = {0,0}
 };

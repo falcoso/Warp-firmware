@@ -31,5 +31,5 @@ const lptmr_user_config_t lptmrConfig = {
     .isInterruptEnabled = false
 };
 
-volatile lptmr_state_t lptmrState; // set when the timer is initialised
+lptmr_state_t lptmrState; // set when the timer is initialised
 
