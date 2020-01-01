@@ -21,15 +21,12 @@ void setDutyCycle(uint16_t level, bool devtpm, bool chn)
 void motorControl(int8_t level);
 
 const lptmr_user_config_t lptmrConfig = {
-    .timerMode = kLptmrTimerModeTimeCounter,
-    .pinSelect = kLptmrPinSelectInput0,
-    .pinPolarity =kLptmrPinPolarityActiveHigh,
-    .freeRunningEnable = true,
-    .prescalerEnable = false,
-    .prescalerClockSource = kClockLptmrSrcLpoClk,
-    .prescalerValue = kLptmrPrescalerDivide2 ,
-    .isInterruptEnabled = false
+    .timerMode            = kLptmrTimerModeTimeCounter, /*! Use LPTMR in Time Counter mode */
+    .freeRunningEnable    = false, /*! When hit compare value, set counter back to zero */
+    .prescalerEnable      = false, /*! bypass prescaler */
+    .prescalerClockSource = kClockLptmrSrcLpoClk, /*! use 1kHz Low Power Clock */
+    .isInterruptEnabled   = true
 };
 
-lptmr_state_t lptmrState; // set when the timer is initialised
+volatile lptmr_state_t lptmrState; // set when the timer is initialised
 

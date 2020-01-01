@@ -20,6 +20,8 @@ int8_t pid_op(controller_t * settings)
     float        error;
     float        output    = 0.0;
 
+    SEGGER_RTT_printf(0, "LPTMR READING: %d\n", new_time);
+
     // get the time change since the last loop
     if (old_time == new_time)  //first initialisation
         dt = 1;
