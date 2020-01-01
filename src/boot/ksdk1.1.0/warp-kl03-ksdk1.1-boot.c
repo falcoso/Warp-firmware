@@ -50,6 +50,7 @@
 #include "fsl_mcglite_hal.h"
 #include "fsl_port_hal.h"
 // #include "fsl_lpuart_driver.h"
+#include "fsl_interrupt_manager.h"
 
 #include "gpio_pins.h"
 #include "SEGGER_RTT.h"
@@ -58,7 +59,7 @@
 #include "devSSD1331.h"
 
 #define WARP_FRDMKL03
-#define LOOP_READINGS
+// #define LOOP_READINGS
 
 #include "devINA219.h"
 #include "devMMA8451Q.h"
@@ -153,9 +154,12 @@ static clock_manager_callback_user_config_t *	clockCallbackTable[] =
 										&clockManagerCallbackUserlevelStructure
 									};
 
-void LPTMR_Interrupt()
+void LPTMR0_IRQHandler(void)
 {
+	SEGGER_RTT_printf(0, "LPTMR start Return: %d\n", LPTMR_DRV_Stop(0));
 	SEGGER_RTT_WriteString(0, "INTERRUPT TRIGGERED!");
+	LPTMR_HAL_ClearIntFlag(g_lptmrBaseAddr[0]);
+	SEGGER_RTT_printf(0, "LPTMR start Return: %d\n", LPTMR_DRV_Start(0));
 }
 
 
@@ -691,7 +695,7 @@ int main(void)
 	uint16_t				menuSupplyVoltage = 1800;
 #endif
 
-	// rtc_datetime_t				warpBootDate;
+	rtc_datetime_t				warpBootDate;
 
 	power_manager_user_config_t		warpPowerModeWaitConfig;
 	power_manager_user_config_t		warpPowerModeStopConfig;
@@ -777,17 +781,17 @@ int main(void)
 			);
 	CLOCK_SYS_UpdateConfiguration(CLOCK_CONFIG_INDEX_FOR_RUN, kClockManagerPolicyForcible);
 
-	// //	Initialize RTC Driver
-	// RTC_DRV_Init(0);
-	//
-	// //	Set initial date to 1st January 2016 00:00, and set date via RTC driver
-	// warpBootDate.year	= 2016U;
-	// warpBootDate.month	= 1U;
-	// warpBootDate.day	= 1U;
-	// warpBootDate.hour	= 0U;
-	// warpBootDate.minute	= 0U;
-	// warpBootDate.second	= 0U;
-	// RTC_DRV_SetDatetime(0, &warpBootDate);
+	//	Initialize RTC Driver
+	RTC_DRV_Init(0);
+
+	//	Set initial date to 1st January 2016 00:00, and set date via RTC driver
+	warpBootDate.year	= 2016U;
+	warpBootDate.month	= 1U;
+	warpBootDate.day	= 1U;
+	warpBootDate.hour	= 0U;
+	warpBootDate.minute	= 0U;
+	warpBootDate.second	= 0U;
+	RTC_DRV_SetDatetime(0, &warpBootDate);
 
 	//	Setup Power Manager Driver
 	memset(&powerManagerCallbackStructure, 0, sizeof(WarpPowerManagerCallbackStructure));
@@ -876,19 +880,25 @@ int main(void)
 							0x01,/* Normal read 8bit, 800Hz, normal, active mode */
 							menuI2cPullupValue
 							);
-	// SEGGER_RTT_printf(0, "LPTMR init Return: %d\n", LPTMR_DRV_Init(0, &lptmrConfig, &lptmrState));
-	SEGGER_RTT_printf(0, "LPTMR start Return: %d\n", LPTMR_DRV_Start(0));
+	SEGGER_RTT_printf(0, "LPTMR init Return: %d\n", LPTMR_DRV_Init(0, &lptmrConfig, (lptmr_state_t*)&lptmrState));
 	// SEGGER_RTT_printf(0, "LPTMR callback return: %d\n", LPTMR_DRV_InstallCallback(0, LPTMR_Interrupt));
-	//
-	// LPTMR_DRV_SetTimerPeriodUs(0, 100);
+	LPTMR_DRV_SetTimerPeriodUs(0,3000000);
+	LPTMR_HAL_SetIntCmd(g_lptmrBaseAddr[0],true);
+	INT_SYS_EnableIRQ(g_lptmrIrqId[0]);
+	SEGGER_RTT_printf(0, "LPTMR start Return: %d\n", LPTMR_DRV_Start(0));
+	SEGGER_RTT_printf(0, "CMR Register: %d\n", LPTMR_HAL_GetCompareValue(g_lptmrBaseAddr[0]));
+	// SEGGER_RTT_printf(0, "Interrupt CMD: %d\n", LPTMR_HAL_GetIntCmd(g_lptmrBaseAddr[0]));
 
 #ifdef LOOP_READINGS
 	// SEGGER_RTT_WriteString(0, "New Kp (4digitx1000)>>");
 	// pidSettings.Kp = (float)(read4digits() * 1000);
 	while(1)
 	{
-		// collect_readings((controller_t*)&pidSettings);
-		// motorControl(pid_op((controller_t*)&pidSettings));
+		collect_readings((controller_t*)&pidSettings);
+		motorControl(pid_op((controller_t*)&pidSettings));
+		SEGGER_RTT_printf(0, "Interrupt Flag: %d\n", LPTMR_HAL_IsIntPending(g_lptmrBaseAddr[0]));
+		SEGGER_RTT_printf(0, "Interrupt CMD: %d\n", LPTMR_HAL_GetIntCmd(g_lptmrBaseAddr[0]));
+
 		SEGGER_RTT_WriteString(0, "Wait in loop\n");
 		SEGGER_RTT_WaitKey();
 	}
