@@ -1,3 +1,5 @@
+#ifndef _WARP_H
+#define _WARP_H
 #include "fsl_spi_master_driver.h"
 
 #define	min(x,y)	((x) < (y) ? (x) : (y))
@@ -168,7 +170,7 @@ typedef enum
 
 typedef enum
 {
-	kWarpSizesI2cBufferBytes		= 4,
+	kWarpSizesI2cBufferBytes		= 6,
 	kWarpSizesSpiBufferBytes		= 3,
 	kWarpSizesBME680CalibrationValuesCount	= 41,
 } WarpSizes;
@@ -358,3 +360,4 @@ void		enableI2Cpins(uint16_t pullupValue);
 void		disableI2Cpins(void);
 void		enableSPIpins(void);
 void		disableSPIpins(void);
+#endif

@@ -59,10 +59,11 @@
 #include "devSSD1331.h"
 
 #define WARP_FRDMKL03
-// #define LOOP_READINGS
+#define LOOP_READINGS
 
 #include "devINA219.h"
 #include "devMMA8451Q.h"
+#include "devMPU6050.h"
 #include "fsl_tpm_driver.h"
 #include "PWMdriver.h"
 #include "PID.h"
@@ -76,6 +77,7 @@
 
 volatile WarpI2CDeviceState			deviceINA219State;
 volatile WarpI2CDeviceState			deviceMMA8451QState;
+volatile WarpI2CDeviceState			deviceMPU6050State;
 
 volatile i2c_master_state_t			i2cMasterState;
 volatile spi_master_state_t			spiMasterState;
@@ -687,6 +689,7 @@ void dumpProcessorState(void){}
 int main(void)
 {
 	uint16_t				menuI2cPullupValue = 32768;
+	int16_t 				x,y,z;
 #ifndef LOOP_READINGS
 	WarpSensorDevice			menuTargetSensor = kWarpSensorBMX055accel;
 	volatile WarpI2CDeviceState *		menuI2cDevice = NULL;
@@ -847,6 +850,7 @@ int main(void)
 	//	Initialize all the sensors
 	initINA219(0x40, &deviceINA219State);
 	initMMA8451Q(0x1D, &deviceMMA8451QState);
+	initMPU6050(0x68, &deviceMPU6050State);
 	/*
 	 *	Make sure SCALED_SENSOR_SUPPLY is off.
 	 *
@@ -875,18 +879,20 @@ int main(void)
 	// initialise screen
 	// devSSD1331init();
 	enableI2Cpins(menuI2cPullupValue);
-	enablePWMpins();
-	configureSensorMMA8451Q(0x00,/* Payload: Disable FIFO */
-							0x01,/* Normal read 8bit, 800Hz, normal, active mode */
-							menuI2cPullupValue
-							);
-	SEGGER_RTT_printf(0, "LPTMR init Return: %d\n", LPTMR_DRV_Init(0, &lptmrConfig, (lptmr_state_t*)&lptmrState));
+	// enablePWMpins();
+	// configureSensorMMA8451Q(0x00,/* Payload: Disable FIFO */
+	// 						0x01,/* Normal read 8bit, 800Hz, normal, active mode */
+	// 						menuI2cPullupValue
+	// 						);
+	configMPU6050(menuI2cPullupValue);
+	// setup LPTMR
+	// SEGGER_RTT_printf(0, "LPTMR init Return: %d\n", LPTMR_DRV_Init(0, &lptmrConfig, (lptmr_state_t*)&lptmrState));
 	// SEGGER_RTT_printf(0, "LPTMR callback return: %d\n", LPTMR_DRV_InstallCallback(0, LPTMR_Interrupt));
-	LPTMR_DRV_SetTimerPeriodUs(0,3000000);
-	LPTMR_HAL_SetIntCmd(g_lptmrBaseAddr[0],true);
-	INT_SYS_EnableIRQ(g_lptmrIrqId[0]);
-	SEGGER_RTT_printf(0, "LPTMR start Return: %d\n", LPTMR_DRV_Start(0));
-	SEGGER_RTT_printf(0, "CMR Register: %d\n", LPTMR_HAL_GetCompareValue(g_lptmrBaseAddr[0]));
+	// LPTMR_DRV_SetTimerPeriodUs(0,3000000);
+	// LPTMR_HAL_SetIntCmd(g_lptmrBaseAddr[0],true);
+	// INT_SYS_EnableIRQ(g_lptmrIrqId[0]);
+	// SEGGER_RTT_printf(0, "LPTMR start Return: %d\n", LPTMR_DRV_Start(0));
+	// SEGGER_RTT_printf(0, "CMR Register: %d\n", LPTMR_HAL_GetCompareValue(g_lptmrBaseAddr[0]));
 	// SEGGER_RTT_printf(0, "Interrupt CMD: %d\n", LPTMR_HAL_GetIntCmd(g_lptmrBaseAddr[0]));
 
 #ifdef LOOP_READINGS
@@ -894,13 +900,21 @@ int main(void)
 	// pidSettings.Kp = (float)(read4digits() * 1000);
 	while(1)
 	{
-		collect_readings((controller_t*)&pidSettings);
-		motorControl(pid_op((controller_t*)&pidSettings));
-		SEGGER_RTT_printf(0, "Interrupt Flag: %d\n", LPTMR_HAL_IsIntPending(g_lptmrBaseAddr[0]));
-		SEGGER_RTT_printf(0, "Interrupt CMD: %d\n", LPTMR_HAL_GetIntCmd(g_lptmrBaseAddr[0]));
-
-		SEGGER_RTT_WriteString(0, "Wait in loop\n");
-		SEGGER_RTT_WaitKey();
+		// collect_readings((controller_t*)&pidSettings);
+		// motorControl(pid_op((controller_t*)&pidSettings));
+		// SEGGER_RTT_printf(0, "Interrupt Flag: %d\n", LPTMR_HAL_IsIntPending(g_lptmrBaseAddr[0]));
+		// SEGGER_RTT_printf(0, "Interrupt CMD: %d\n", LPTMR_HAL_GetIntCmd(g_lptmrBaseAddr[0]));
+		devMPU6050getAcceleration(&x, &y, &z);
+		SEGGER_RTT_printf(0, "X: %d \t",x);
+		SEGGER_RTT_printf(0, "Y: %d \t",y);
+		SEGGER_RTT_printf(0, "Z: %d \t",z);
+		devMPU6050getRotation(&x, &y, &z);
+		SEGGER_RTT_printf(0, "XR: %d \t",x);
+		SEGGER_RTT_printf(0, "YR: %d \t",y);
+		SEGGER_RTT_printf(0, "ZR: %d\n",z);
+		// SEGGER_RTT_WriteString(0, "Wait in loop\n");
+		// SEGGER_RTT_WaitKey();
+		OSA_TimeDelay(100);
 	}
 #else
 
