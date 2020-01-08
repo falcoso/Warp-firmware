@@ -384,7 +384,7 @@
 
 void initMPU6050(const uint8_t i2cAddress, WarpI2CDeviceState volatile *  deviceStatePointer);
 
-void configMPU6050(uint16_t menuI2cPullup);
+float configMPU6050(uint16_t menuI2cPullup);
 
 WarpStatus writeSensorRegisterMPU6050(uint8_t deviceRegister, uint8_t payload, uint16_t menuI2cPullupValue);
 WarpStatus readSensorRegisterMPU6050(uint8_t deviceRegister, int numberOfBytes);
@@ -398,3 +398,6 @@ void devMPU6050getRotation(int16_t* x, int16_t* y, int16_t* z);
 int16_t devMPU6050getRotationX();
 int16_t devMPU6050getRotationY();
 int16_t devMPU6050getRotationZ();
+
+WarpStatus devMPU6050setRate(uint8_t rate, uint16_t menuI2cPullup);
+uint8_t devMPU6050getRate();

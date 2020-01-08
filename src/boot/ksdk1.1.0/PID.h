@@ -12,10 +12,10 @@ typedef struct Controller
 } controller_t;
 
 volatile controller_t pidSettings = {
-    .Kp = 1000,
-    .Ki = 700,
-    .Kd = 1,
-    .target = -(5.0/180)*M_PI,
+    .Kp = 70,
+    .Ki = 50,
+    .Kd = 1E-6,
+    .target = -7,
     .real = 0.0,
     .accel = {0,0}
 };
@@ -23,3 +23,5 @@ volatile controller_t pidSettings = {
 int8_t pid_op(controller_t * settings);
 
 void collect_readings(controller_t * settings);
+
+void calculate_angle(int16_t accx, int16_t accz, int16_t gyroy, controller_t *pid_settings);

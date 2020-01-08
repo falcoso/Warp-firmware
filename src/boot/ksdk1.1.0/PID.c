@@ -12,35 +12,22 @@ extern volatile WarpI2CDeviceState	deviceMMA8451QState;
 int8_t pid_op(controller_t * settings)
 {
     static uint32_t old_time = 0;
-    uint32_t     new_time = LPTMR_DRV_GetCurrentTimeUs(0);
-    uint32_t     dt; // microseconds elapsed
+    uint32_t     dt = LPTMR_DRV_GetCurrentTimeUs(0);
 
     static float error_int = 0.0;
     static float old_error = 0;
     float        error;
     float        output    = 0.0;
 
-    SEGGER_RTT_printf(0, "LPTMR READING: %d\n", new_time);
-
-    // get the time change since the last loop
-    if (old_time == new_time)  //first initialisation
-        dt = 1;
-    else if (old_time > new_time) { //timer has overflowed
-        dt = new_time + 0x2F00000 - old_time;
-        SEGGER_RTT_WriteString(0, "LPTMR Overflow\n");
-    }
-    else
-        dt = new_time-old_time;
-
     // calculate the error
     error = settings->target - settings->real;
-    error_int += (error+old_error)*dt/2;
+    error_int += (error+old_error)*dt*1E-6/2;
 
     output += settings->Kp*error;
     output += settings->Ki*1E-6*error_int;
 
     if(old_time != 0 || old_error != 0)
-        output += settings->Kd*1E6*(error-old_error)/dt;
+        output += settings->Kd*1E6*(error-old_error)/(dt*1E-6);
 
     // cap the output since the PWM can only take 0-100%
     if (output > 100)
@@ -48,7 +35,6 @@ int8_t pid_op(controller_t * settings)
     if (output < -100)
         output = -100;
 
-    old_time = new_time;
     old_error = error;
 
     return (int8_t)output;
@@ -79,4 +65,21 @@ void collect_readings(controller_t * settings)
         settings->accel[i] = (settings->accel[i] ^ (1 << 13)) - (1 << 13);
     }
     settings->real = (float)atan2((float)settings->accel[1],(float)settings->accel[0]);
+}
+
+long map(long x, long in_min, long in_max, long out_min, long out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+void calculate_angle(int16_t accx, int16_t accz, int16_t gyroy, controller_t *pid_settings)
+{
+    uint32_t sampleTime = LPTMR_DRV_GetCurrentTimeUs(0);
+    int16_t gyroRate;
+    float gyroAngle;
+    float accAngle;
+
+    accAngle = atan2(accz, accx)*180.0/M_PI;
+    gyroRate = map(gyroy, -32768, 32767, -250, 250);
+    gyroAngle = (float)gyroRate*sampleTime*1E-6;
+    pid_settings->real = 0.9934*(pid_settings->real + gyroAngle) + 0.0066*(accAngle);
 }
