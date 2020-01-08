@@ -95,7 +95,6 @@ volatile uint32_t			gWarpI2cTimeoutMilliseconds	= 5;
 volatile uint32_t			gWarpSpiTimeoutMicroseconds	= 5;
 volatile uint32_t			gWarpMenuPrintDelayMilliseconds	= 10;
 volatile uint32_t			gWarpSupplySettlingDelayMilliseconds = 1;
-volatile bool 				int_ready = false;
 
 void sleepUntilReset(void);
 void lowPowerPinStates(void);
@@ -156,13 +155,6 @@ static clock_manager_callback_user_config_t *	clockCallbackTable[] =
 									{
 										&clockManagerCallbackUserlevelStructure
 									};
-
-void LPTMR0_IRQHandler(void)
-{
-	LPTMR_HAL_ClearIntFlag(g_lptmrBaseAddr[0]);
-	int_ready = true;
-	// SEGGER_RTT_printf(0, "LPTMR start Return: %d\n", LPTMR_DRV_Start(0));
-}
 
 
 clock_manager_error_code_t
@@ -851,6 +843,8 @@ int main(void)
 	initINA219(0x40, &deviceINA219State);
 	initMMA8451Q(0x1D, &deviceMMA8451QState);
 	initMPU6050(0x68, &deviceMPU6050State);
+
+
 	/*
 	 *	Make sure SCALED_SENSOR_SUPPLY is off.
 	 *
@@ -876,35 +870,32 @@ int main(void)
 #endif
 
 
-	// initialise screen
+	// enable pins and configure sensors
 	// devSSD1331init();
 	enableI2Cpins(menuI2cPullupValue);
 	enablePWMpins();
-	// configureSensorMMA8451Q(0x00,/* Payload: Disable FIFO */
-	// 						0x01,/* Normal read 8bit, 800Hz, normal, active mode */
-	// 						menuI2cPullupValue
-	// 						);
-	pidSettings.real = configMPU6050(menuI2cPullupValue);
+	configureSensorMMA8451Q(0x00, 0x01, menuI2cPullupValue);
+
+
 	// setup LPTMR
 	SEGGER_RTT_printf(0, "LPTMR init Return: %d\n", LPTMR_DRV_Init(0, &lptmrConfig, (lptmr_state_t*)&lptmrState));
-	LPTMR_DRV_SetTimerPeriodUs(0,2000);
+	LPTMR_DRV_SetTimerPeriodUs(0,5000); // 2ms interrupt time
 	LPTMR_HAL_SetIntCmd(g_lptmrBaseAddr[0],true);
-	INT_SYS_EnableIRQ(g_lptmrIrqId[0]);
 	SEGGER_RTT_printf(0, "LPTMR start Return: %d\n", LPTMR_DRV_Start(0));
-	SEGGER_RTT_printf(0, "CMR Register: %d\n", LPTMR_HAL_GetCompareValue(g_lptmrBaseAddr[0]));
-	SEGGER_RTT_printf(0, "Interrupt CMD: %d\n", LPTMR_HAL_GetIntCmd(g_lptmrBaseAddr[0]));
 
 #ifdef LOOP_READINGS
 	SEGGER_RTT_WriteString(0, "Press any Key to Start\n");
 	SEGGER_RTT_WaitKey();
+	pidSettings.real = configMPU6050(menuI2cPullupValue);
 	while(1)
 	{
-		if(int_ready == true)
+		devMPU6050getAcceleration(&x, &y, &z);
+		y = devMPU6050getRotationY();
+		if(LPTMR_HAL_IsIntPending(g_lptmrBaseAddr[0]) == true)
 		{
-			int_ready = false;
-			devMPU6050getAcceleration(&x, &y, &z);
-			y = devMPU6050getRotationY();
+			LPTMR_HAL_ClearIntFlag(g_lptmrBaseAddr[0]);
 			calculate_angle(x, z, y, (controller_t*)&pidSettings);
+			SEGGER_RTT_printf(0, "Angle %d\n", (int16_t)pidSettings.real);
 			motorControl(pid_op( (controller_t*)&pidSettings ));
 			LPTMR_DRV_Stop(0);
 			LPTMR_DRV_Start(0);

@@ -80,6 +80,6 @@ void calculate_angle(int16_t accx, int16_t accz, int16_t gyroy, controller_t *pi
 
     accAngle = atan2(accz, accx)*180.0/M_PI;
     gyroRate = map(gyroy, -32768, 32767, -250, 250);
-    gyroAngle = (float)gyroRate*sampleTime*1E-6;
-    pid_settings->real = 0.9934*(pid_settings->real + gyroAngle) + 0.0066*(accAngle);
+    gyroAngle = (float)gyroRate*3*sampleTime*1E-6;
+    pid_settings->real = 0.99*(pid_settings->real + gyroAngle) + 0.01*(accAngle);
 }
