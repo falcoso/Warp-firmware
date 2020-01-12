@@ -49,7 +49,6 @@
 #include "fsl_power_manager.h"
 #include "fsl_mcglite_hal.h"
 #include "fsl_port_hal.h"
-// #include "fsl_lpuart_driver.h"
 #include "fsl_interrupt_manager.h"
 
 #include "gpio_pins.h"
@@ -61,8 +60,11 @@
 #define WARP_FRDMKL03
 #define LOOP_READINGS
 
+#ifndef LOOP_READINGS
 #include "devINA219.h"
 #include "devMMA8451Q.h"
+#endif
+
 #include "devMPU6050.h"
 #include "fsl_tpm_driver.h"
 #include "PWMdriver.h"
@@ -74,9 +76,11 @@
 #define	kWarpConstantStringErrorInvalidVoltage	"\rInvalid supply voltage [%d] mV!"
 #define	kWarpConstantStringErrorSanity		"\rSanity check failed!"
 
-
+#ifndef LOOP_READINGS
 volatile WarpI2CDeviceState			deviceINA219State;
 volatile WarpI2CDeviceState			deviceMMA8451QState;
+#endif
+
 volatile WarpI2CDeviceState			deviceMPU6050State;
 
 volatile i2c_master_state_t			i2cMasterState;
@@ -217,60 +221,6 @@ power_manager_error_code_t callback0(power_manager_notify_struct_t *  notify,
 
 	return status;
 }
-
-/*
- *	From KSDK power_manager_demo.c <<END>>>
- */
-
-
-// void sleepUntilReset(void)
-// {
-// 	while (1)
-// 	{
-// 		warpLowPowerSecondsSleep(1, false /* forceAllPinsIntoLowPowerState */);
-// 		warpLowPowerSecondsSleep(60, true /* forceAllPinsIntoLowPowerState */);
-// 	}
-// }
-//  #ifndef LOOP_READINGS
-// void enableLPUARTpins(void)
-// {
-// 	/*	Enable UART CLOCK */
-// 	CLOCK_SYS_EnableLpuartClock(0);
-//
-// 	/*
-// 	*	set UART pin association
-// 	*	see page 99 in https://www.nxp.com/docs/en/reference-manual/KL03P24M48SF0RM.pdf
-// 	*/
-//
-// 	//	Initialize LPUART0. See KSDK13APIRM.pdf section 40.4.3, page 1353
-// 	lpuartUserConfig.baudRate = 115;
-// 	lpuartUserConfig.parityMode = kLpuartParityDisabled;
-// 	lpuartUserConfig.stopBitCount = kLpuartOneStopBit;
-// 	lpuartUserConfig.bitCountPerChar = kLpuart8BitsPerChar;
-//
-// 	LPUART_DRV_Init(0,(lpuart_state_t *)&lpuartState,(lpuart_user_config_t *)&lpuartUserConfig);
-//
-// }
-//
-//
-// void disableLPUARTpins(void)
-// {
-// 	//	LPUART deinit
-// 	LPUART_DRV_Deinit(0);
-//
-// 	/*	Warp KL03_UART_HCI_RX	--> PTB4 (GPIO)	*/
-// 	PORT_HAL_SetMuxMode(PORTB_BASE, 4, kPortMuxAsGpio);
-// 	/*	Warp KL03_UART_HCI_TX	--> PTB3 (GPIO) */
-// 	PORT_HAL_SetMuxMode(PORTB_BASE, 3, kPortMuxAsGpio);
-//
-// 	GPIO_DRV_ClearPinOutput(kWarpPinLPUART_HCI_TX);
-// 	GPIO_DRV_ClearPinOutput(kWarpPinLPUART_HCI_RX);
-//
-// 	/* Disable LPUART CLOCK */
-// 	CLOCK_SYS_DisableLpuartClock(0);
-//
-// }
-// #endif
 
 void enableSPIpins(void)
 {
@@ -657,24 +607,6 @@ void disableSssupply(void)
 }
 
 
-
-// void warpLowPowerSecondsSleep(uint32_t sleepSeconds, bool forceAllPinsIntoLowPowerState)
-// {
-// 	/*
-// 	 *	Set all pins into low-power states. We don't just disable all pins,
-// 	 *	as the various devices hanging off will be left in higher power draw
-// 	 *	state. And manuals say set pins to output to reduce power.
-// 	 */
-// 	if (forceAllPinsIntoLowPowerState)
-// 	{
-// 		lowPowerPinStates();
-// 	}
-//
-// 	warpSetLowPowerMode(kWarpPowerModeVLPR, 0);
-// 	warpSetLowPowerMode(kWarpPowerModeVLPS, sleepSeconds);
-// }
-
-
 void printPinDirections(void){}
 void dumpProcessorState(void){}
 
@@ -840,8 +772,10 @@ int main(void)
 
 
 	//	Initialize all the sensors
+#ifndef LOOP_READINGS
 	initINA219(0x40, &deviceINA219State);
 	initMMA8451Q(0x1D, &deviceMMA8451QState);
+#endif
 	initMPU6050(0x68, &deviceMPU6050State);
 
 
@@ -871,37 +805,44 @@ int main(void)
 
 
 	// enable pins and configure sensors
-	// devSSD1331init();
 	enableI2Cpins(menuI2cPullupValue);
 	enablePWMpins();
-	configureSensorMMA8451Q(0x00, 0x01, menuI2cPullupValue);
 
 
 	// setup LPTMR
+#ifdef PRINT_F
 	SEGGER_RTT_printf(0, "LPTMR init Return: %d\n", LPTMR_DRV_Init(0, &lptmrConfig, (lptmr_state_t*)&lptmrState));
 	LPTMR_DRV_SetTimerPeriodUs(0,5000); // 2ms interrupt time
 	LPTMR_HAL_SetIntCmd(g_lptmrBaseAddr[0],true);
 	SEGGER_RTT_printf(0, "LPTMR start Return: %d\n", LPTMR_DRV_Start(0));
+#else
+	LPTMR_DRV_Init(0, &lptmrConfig, (lptmr_state_t*)&lptmrState);
+	LPTMR_DRV_SetTimerPeriodUs(0,5000); // 2ms interrupt time
+	LPTMR_HAL_SetIntCmd(g_lptmrBaseAddr[0],true);
+	LPTMR_DRV_Start(0);
+#endif
 
 #ifdef LOOP_READINGS
+
+#ifdef PRINT_F
 	SEGGER_RTT_WriteString(0, "Press any Key to Start\n");
 	SEGGER_RTT_WaitKey();
+	SEGGER_RTT_WriteString(0, "Acc,Gyro,Real\n");
+#endif
 	pidSettings.real = configMPU6050(menuI2cPullupValue);
 	while(1)
 	{
 		devMPU6050getAcceleration(&x, &y, &z);
 		y = devMPU6050getRotationY();
+
 		if(LPTMR_HAL_IsIntPending(g_lptmrBaseAddr[0]) == true)
 		{
 			LPTMR_HAL_ClearIntFlag(g_lptmrBaseAddr[0]);
 			calculate_angle(x, z, y, (controller_t*)&pidSettings);
-			SEGGER_RTT_printf(0, "Angle %d\n", (int16_t)pidSettings.real);
 			motorControl(pid_op( (controller_t*)&pidSettings ));
 			LPTMR_DRV_Stop(0);
 			LPTMR_DRV_Start(0);
 		}
-		// SEGGER_RTT_WriteString(0, "Wait in loop\n");
-		// SEGGER_RTT_WaitKey();
 	}
 
 #else
@@ -1250,7 +1191,7 @@ int main(void)
 }
 
 
-
+#ifndef LOOP_READINGS
 void printAllSensors(bool printHeadersAndCalibration, bool hexModeFlag, int menuDelayBetweenEachRun, int i2cPullupValue)
 {
 	//	A 32-bit counter gives us > 2 years of before it wraps, even if sampling at 60fps
@@ -1666,3 +1607,4 @@ void activateAllLowPowerSensorModes(bool verbose)
 {
 	SEGGER_RTT_WriteString(0, "\r\tContents removed from activateAllLowPowerSensorModes - see original Warp Firmware \n");
 }
+#endif

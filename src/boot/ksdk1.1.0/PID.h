@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include "math.h"
 
+#define PRINT_F
+
 typedef struct Controller
 {
     float Kp;
@@ -12,10 +14,10 @@ typedef struct Controller
 } controller_t;
 
 volatile controller_t pidSettings = {
-    .Kp = 70,
-    .Ki = 50,
-    .Kd = 1E-6,
-    .target = -7,
+    .Kp = 20,
+    .Ki = 30,//5,
+    .Kd = 0.3,
+    .target = -3,
     .real = 0.0,
     .accel = {0,0}
 };

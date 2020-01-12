@@ -5,29 +5,26 @@
 #include "fsl_lptmr_driver.h"
 #include "fsl_tpm_driver.h"
 #include "devMMA8451Q.h"
+#include "devMPU6050.h"
 #include "SEGGER_RTT.h"
+
+// #define PRINT_F
 
 extern volatile WarpI2CDeviceState	deviceMMA8451QState;
 
 int8_t pid_op(controller_t * settings)
 {
-    static uint32_t old_time = 0;
     uint32_t     dt = LPTMR_DRV_GetCurrentTimeUs(0);
 
     static float error_int = 0.0;
     static float old_error = 0;
-    float        error;
-    float        output    = 0.0;
+    float        error, output;
 
     // calculate the error
     error = settings->target - settings->real;
     error_int += (error+old_error)*dt*1E-6/2;
 
-    output += settings->Kp*error;
-    output += settings->Ki*1E-6*error_int;
-
-    if(old_time != 0 || old_error != 0)
-        output += settings->Kd*1E6*(error-old_error)/(dt*1E-6);
+    output = settings->Kp*error + settings->Ki*error_int + settings->Kd*(error-old_error)/(dt*1E-6);
 
     // cap the output since the PWM can only take 0-100%
     if (output > 100)
@@ -36,7 +33,7 @@ int8_t pid_op(controller_t * settings)
         output = -100;
 
     old_error = error;
-
+    // SEGGER_RTT_printf(0, "ERROR %d\n", (int)output);
     return (int8_t)output;
 }
 
@@ -75,11 +72,25 @@ void calculate_angle(int16_t accx, int16_t accz, int16_t gyroy, controller_t *pi
 {
     uint32_t sampleTime = LPTMR_DRV_GetCurrentTimeUs(0);
     int16_t gyroRate;
-    float gyroAngle;
-    float accAngle;
+    float gyroAngle, accAngle;
+#ifdef PRINT_F
+    static float rotAngle = 0;
+    static bool init = true;
+    if(init == true)
+    {
+        init = false;
+        rotAngle = pid_settings->real;
+    }
+#endif
 
     accAngle = atan2(accz, accx)*180.0/M_PI;
     gyroRate = map(gyroy, -32768, 32767, -250, 250);
     gyroAngle = (float)gyroRate*3*sampleTime*1E-6;
     pid_settings->real = 0.99*(pid_settings->real + gyroAngle) + 0.01*(accAngle);
+#ifdef PRINT_F
+    rotAngle += gyroAngle;
+    SEGGER_RTT_printf(0, "%d,", (int)(accAngle*100.0));
+    SEGGER_RTT_printf(0, "%d,", (int)(rotAngle*100.0));
+    SEGGER_RTT_printf(0, "%d\n", (int)(pid_settings->real*100.0));
+#endif
 }
