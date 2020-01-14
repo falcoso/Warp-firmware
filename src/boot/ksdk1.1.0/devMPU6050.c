@@ -1,3 +1,4 @@
+/* See MPU6050.h for function docstrings */
 #include <stdlib.h>
 #include <stdint.h>
 #include "devMPU6050.h"
@@ -80,6 +81,36 @@ WarpStatus writeSensorRegisterMPU6050(uint8_t deviceRegister, uint8_t payload, u
 	return kWarpStatusOK;
 }
 
+WarpStatus writeSensorRegisterwordMPU6050(uint8_t deviceRegister, uint16_t payload, uint16_t menuI2cPullupValue)
+{
+	uint8_t	 payloadByte[2], commandByte[1];
+	i2c_status_t	status;
+
+	i2c_device_t slave =
+	{
+		.address = deviceMPU6050State.i2cAddress,
+		.baudRate_kbps = gWarpI2cBaudRateKbps
+	};
+
+	commandByte[0] = deviceRegister;
+	payloadByte[0] = payload >> 8;
+	payloadByte[1] = payload & 0xFF;
+	status = I2C_DRV_MasterSendDataBlocking(
+							0 /* I2C instance */,
+							&slave,
+							commandByte,
+							1,
+							payloadByte,
+							2,
+							gWarpI2cTimeoutMilliseconds);
+	if (status != kStatus_I2C_Success)
+	{
+		return kWarpStatusDeviceCommunicationFailed;
+	}
+
+	return kWarpStatusOK;
+}
+
 WarpStatus readSensorRegisterMPU6050(uint8_t deviceRegister, int numberOfBytes)
 {
 	uint8_t		cmdBuf[1] = {0xFF};
@@ -122,11 +153,8 @@ void devMPU6050getAcceleration(int16_t* x, int16_t* y, int16_t* z)
     *y = (((int16_t)deviceMPU6050State.i2cBuffer[2]) << 8) | deviceMPU6050State.i2cBuffer[3];
     *z = (((int16_t)deviceMPU6050State.i2cBuffer[4]) << 8) | deviceMPU6050State.i2cBuffer[5];
 }
-/** Get X-axis accelerometer reading.
- * @return X-axis acceleration measurement in 16-bit 2's complement format
- * @see getMotion6()
- * @see MPU6050_RA_ACCEL_XOUT_H
- */
+
+
 int16_t devMPU6050getAccelerationX()
 {
     WarpStatus status = readSensorRegisterMPU6050(MPU6050_RA_ACCEL_XOUT_H, 2);
@@ -134,26 +162,21 @@ int16_t devMPU6050getAccelerationX()
         SEGGER_RTT_printf(0, "I2c failed with: %d \n", status);
     return (((int16_t)deviceMPU6050State.i2cBuffer[0]) << 8) | deviceMPU6050State.i2cBuffer[1];
 }
-/** Get Y-axis accelerometer reading.
- * @return Y-axis acceleration measurement in 16-bit 2's complement format
- * @see getMotion6()
- * @see MPU6050_RA_ACCEL_YOUT_H
- */
+
+
 int16_t devMPU6050getAccelerationY()
 {
     readSensorRegisterMPU6050(MPU6050_RA_ACCEL_YOUT_H, 2);
     return (((int16_t)deviceMPU6050State.i2cBuffer[0]) << 8) | deviceMPU6050State.i2cBuffer[1];
 }
-/** Get Z-axis accelerometer reading.
- * @return Z-axis acceleration measurement in 16-bit 2's complement format
- * @see getMotion6()
- * @see MPU6050_RA_ACCEL_ZOUT_H
- */
+
+
 int16_t devMPU6050getAccelerationZ()
 {
     readSensorRegisterMPU6050(MPU6050_RA_ACCEL_ZOUT_H, 2);
     return (((int16_t)deviceMPU6050State.i2cBuffer[0]) << 8) | deviceMPU6050State.i2cBuffer[1];
 }
+
 
 void devMPU6050getRotation(int16_t* x, int16_t* y, int16_t* z)
 {
@@ -162,21 +185,15 @@ void devMPU6050getRotation(int16_t* x, int16_t* y, int16_t* z)
     *y = (((int16_t)deviceMPU6050State.i2cBuffer[2]) << 8) | deviceMPU6050State.i2cBuffer[3];
     *z = (((int16_t)deviceMPU6050State.i2cBuffer[4]) << 8) | deviceMPU6050State.i2cBuffer[5];
 }
-/** Get X-axis gyroscope reading.
- * @return X-axis rotation measurement in 16-bit 2's complement format
- * @see getMotion6()
- * @see MPU6050_RA_GYRO_XOUT_H
- */
+
+
 int16_t devMPU6050getRotationX()
 {
     readSensorRegisterMPU6050(MPU6050_RA_GYRO_XOUT_H, 2);
     return (((int16_t)deviceMPU6050State.i2cBuffer[0]) << 8) | deviceMPU6050State.i2cBuffer[1];
 }
-/** Get Y-axis gyroscope reading.
- * @return Y-axis rotation measurement in 16-bit 2's complement format
- * @see getMotion6()
- * @see MPU6050_RA_GYRO_YOUT_H
- */
+
+
 int16_t devMPU6050getRotationY()
 {
     WarpStatus status = readSensorRegisterMPU6050(MPU6050_RA_GYRO_YOUT_H, 2);
@@ -184,16 +201,14 @@ int16_t devMPU6050getRotationY()
 		SEGGER_RTT_printf(0, "I2c failed to get MPU6050 Y Rotation with: %d \n", status);
     return (((int16_t)deviceMPU6050State.i2cBuffer[0]) << 8) | deviceMPU6050State.i2cBuffer[1];
 }
-/** Get Z-axis gyroscope reading.
- * @return Z-axis rotation measurement in 16-bit 2's complement format
- * @see getMotion6()
- * @see MPU6050_RA_GYRO_ZOUT_H
- */
+
+
 int16_t devMPU6050getRotationZ()
 {
     readSensorRegisterMPU6050(MPU6050_RA_GYRO_ZOUT_H, 2);
     return (((int16_t)deviceMPU6050State.i2cBuffer[0]) << 8) | deviceMPU6050State.i2cBuffer[1];
 }
+
 
 uint8_t devMPU6050getRate()
 {
@@ -204,11 +219,7 @@ uint8_t devMPU6050getRate()
     return deviceMPU6050State.i2cBuffer[0];
 }
 
-/** Set gyroscope sample rate divider.
- * @param rate New sample rate divider
- * @see getRate()
- * @see MPU6050_RA_SMPLRT_DIV
- */
+
 WarpStatus devMPU6050setRate(uint8_t rate, uint16_t menuI2cPullup)
 {
 	WarpStatus status;
@@ -217,4 +228,3 @@ WarpStatus devMPU6050setRate(uint8_t rate, uint16_t menuI2cPullup)
 		SEGGER_RTT_printf(0, "I2c failed with %d\n", status);
 	return status;
 }
-

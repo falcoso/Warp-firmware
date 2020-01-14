@@ -1,5 +1,7 @@
 #ifndef _WARP_H
 #define _WARP_H
+
+#define PRINT_F
 #include "fsl_spi_master_driver.h"
 
 #define	min(x,y)	((x) < (y) ? (x) : (y))

@@ -1,9 +1,19 @@
-#ifndef WARP_BUILD_ENABLE_DEVINA219
-#define WARP_BUILD_ENABLE_DEVINA219
+/*
+ * Author O. G Jones 2019
+ * Driver for KL03z to use MPU6050 Interial measurement unit within the Warp
+ * Firmware.
+ *
+ * Based on the driver written by J. Rowberg for Arduino:
+ * https://github.com/jrowberg/i2cdevlib/tree/master/Arduino/MPU6050
+ */
+
+#ifndef WARP_BUILD_ENABLE_DEVMPU6050
+#define WARP_BUILD_ENABLE_DEVMPU6050
 #endif
 
 #include "warp.h"
 
+// Registers and MPU6050 parameters
 #define MPU6050_ADDRESS_AD0_LOW     0x68 // address pin low (GND), default for InvenSense evaluation board
 #define MPU6050_ADDRESS_AD0_HIGH    0x69 // address pin high (VCC)
 #define MPU6050_DEFAULT_ADDRESS     MPU6050_ADDRESS_AD0_LOW
@@ -382,22 +392,60 @@
 #define MPU6050_DMP_MEMORY_BANK_SIZE    256
 #define MPU6050_DMP_MEMORY_CHUNK_SIZE   16
 
+/*
+ * Initialises the INA219 WarpI2CDeviceState within the warp firmware
+ * Based on MMA8451Q driver
+ */
 void initMPU6050(const uint8_t i2cAddress, WarpI2CDeviceState volatile *  deviceStatePointer);
 
 float configMPU6050(uint16_t menuI2cPullup);
 
+/*
+ * Writes single byte <payload> to register <deviceRegister> on the IN219 over I2C -
+ * note the config registers of the INA219 are 2bytes in size.
+ * Based on MMA8451Q driver
+ */
 WarpStatus writeSensorRegisterMPU6050(uint8_t deviceRegister, uint8_t payload, uint16_t menuI2cPullupValue);
+
+/*
+ * Reads <numberOfBytes> bytes from register <deviceRegister> on the INA219
+ * over I2C.
+ * Based on MMA8451Q driver
+ */
 WarpStatus readSensorRegisterMPU6050(uint8_t deviceRegister, int numberOfBytes);
 
+/*
+ * Gets the X, Y, Z accelerometer readings from the MPU6050 and writes it to
+ * &x, &y, &z respectively.
+ */
 void devMPU6050getAcceleration(int16_t* x, int16_t* y, int16_t* z);
+
+/* Returns the X accelerometer reading from the MPU6050 */
 int16_t devMPU6050getAccelerationX();
+
+/* Returns the Y accelerometer reading from the MPU6050 */
 int16_t devMPU6050getAccelerationY();
+
+/* Returns the Z accelerometer reading from the MPU6050 */
 int16_t devMPU6050getAccelerationZ();
 
+/*
+ * Gets the X, Y, Z gyroscope readings from the MPU6050 and writes it to
+ * &x, &y, &z respectively.
+ */
 void devMPU6050getRotation(int16_t* x, int16_t* y, int16_t* z);
+
+/* Returns the X gyroscope reading from the MPU6050 */
 int16_t devMPU6050getRotationX();
+
+/* Returns the Y gyroscope reading from the MPU6050 */
 int16_t devMPU6050getRotationY();
+
+/* Returns the Z gyroscope reading from the MPU6050 */
 int16_t devMPU6050getRotationZ();
 
+/* Sets the sampling rate of the MPU6050  to <rate> */
 WarpStatus devMPU6050setRate(uint8_t rate, uint16_t menuI2cPullup);
+
+/* Gets the current sampling rate of the MPU6050 */
 uint8_t devMPU6050getRate();
