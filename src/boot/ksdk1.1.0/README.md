@@ -1,15 +1,19 @@
 ## Overview
-The Warp firmware is intended to be a demonstration and meassurement environment for testing the Warp hardware. 
-
-It provides facilities that we use to perform tests on the hardware such as activating the different programmable voltage regulator output voltages (16 different supply voltage levels),
-activating the programmable I2C pull-ups to different values (65536 different settings), changing the I2C and SPI bit rate, changing the Cortex-M0 clock frequency,
-and so on. Having a menu interface allows us to perform various experiments without having to re-compile and load firmware to the system for each experiment.
-
-The Warp firmware is a tool for experimentation. You can also use it as a baseline for building real applications by modifying it to remove the menu-driven functionality and linking in only the sensor drivers you need.
+This fork of the Warp Firmware repository modifies the original firmware to create a controller for an inverted pendulum system.
 
 The core of the firmware is in `warp-kl03-ksdk1.1-boot.c`. The drivers for the individual sensors are in `devXXX.c` for sensor `XXX`. For example,
-`devADXL362.c` for the ADXL362 3-axis accelerometer. The section below briefly describes all the source files in this directory. 
+`devMMA8451Q.c` for the MMA8451Q 3-axis accelerometer.
 
+## Macros
+
+## `LOOP_READINGS`
+Defined in `warp-kl03-ksdk1.1-boot.c`, this macro compiles the firmware to start up in the inverted pendulum control loop.
+
+## `PRINT_F`
+Defined in `PID.h` if this is enabled along with `LOOP_READINGS`, after initialising the robot will wait for an input from the terminal. Once any key is pressed the robot will start the controller and output angle readings, and if the INA219 is connected, current readings as well, in `.csv` format.
+
+## Not defining `LOOP_READINGS`
+This will compile the robot in the original Warp Firmware menu with additional options to configure PWM. NOTE modifications to this were made in early stages of development so some menu options may present unexpected behavior and is only included for debugging purposes.
 
 ## Source File Descriptions
 
@@ -26,62 +30,20 @@ Configuration file for SEGGER Real-Time Terminal interface. You can increase the
 ##### `SEGGER_RTT_printf.c`
 Implementation of the SEGGER Real-Time Terminal interface formatted I/O routines. Do not modify.
 
-##### `devADXL362.*`
-Driver for Analog devices ADXL362.
+##### `devINA219.*`
+Driver for INA219.
 
-##### `devAMG8834.*`
-Driver for AMG8834.
-
-##### `devAS7262.*`
-Driver for AS7262.
-
-##### `devAS7263.*`
-Driver for AS7263.
-
-##### `devAS726x.h`
-Header file with definitions used by both `devAS7262.*` and `devAS7263.*`.
-
-##### `devBME680.*`
-Driver for BME680.
-
-##### `devBMX055.*`
-Driver for BMX055.
-
-##### `devCCS811.*`
-Driver for CCS811.
-
-##### `devHDC1000.*`
-Driver forHDC1000 .
-
-##### `devIS25WP128.*`
-Driver for IS25WP128.
-
-##### `devISL23415.*`
-Driver for ISL23415.
-
-##### `devL3GD20H.*`
-Driver for L3GD20H.
-
-##### `devLPS25H.*`
-Driver for LPS25H.
-
-##### `devMAG3110.*`
-Driver for MAG3110.
+##### `devL289N.*`
+Driver for L289N. TPM and LPTMR variables are initialised in here for Pule Width Modulation generation on the motor driver circuits.
 
 ##### `devMMA8451Q.*`
 Driver for MMA8451Q.
 
-##### `devPAN1326.*`
-Driver for PAN1326.
+##### `devMPU6050.*`
+Driver for MPU6050.
 
-##### `devSI4705.*`
-Driver for SI4705.
-
-##### `devSI7021.*`
-Driver for SI7021.
-
-##### `devTCS34725.*`
-Driver for TCS34725.
+##### `devSSD1331.*`
+Driver for SSD1331.
 
 ##### `gpio_pins.c`
 Definition of I/O pin configurations using the KSDK `gpio_output_pin_user_config_t` structure.
@@ -92,20 +54,11 @@ Definition of I/O pin mappings and aliases for different I/O pins to symbolic na
 ##### `startup_MKL03Z4.S`
 Initialization assembler.
 
+##### `PID.*`
+Library for creating a PID controller based on MPU6050 readings.
+
 ##### `warp-kl03-ksdk1.1-boot.c`
-The core of the implementation. This puts together the processor initialization with a menu interface that triggers the individual sensor drivers based on commands entered at the menu.
-You can modify `warp-kl03-ksdk1.1-boot.c` to achieve a custom firmware implementation using the following steps:
-
-1.  Remove the definitions for all the `WarpI2CDeviceState` and `WarpSPIDeviceState` structures for the sensors you are not using.
-
-2.  Remove the function `repeatRegisterReadForDeviceAndAddress()` since that references all the sensors in the full Warp platform.
-
-3.  Remove `activateAllLowPowerSensorModes()` and `powerupAllSensors()` since those assume they have access to all the sensors on the Warp platform.
-
-4.  Modify `main()` to replace the menu (see the `while (1)` [loop](https://github.com/physical-computation/Warp-firmware/blob/ea3fac66e0cd85546b71134538f8d8f6ce1741f3/src/boot/ksdk1.1.0/warp-kl03-ksdk1.1-boot.c#L1107)) with the specific operations you want the hardware to perform after initialization.
-
-You can inspect the baseline firmware to see what functions are called when you enter commands at the menu. You can then use the underlying functionality that is already implemented to implement your own custom tasks.
-
+The core of the implementation. This puts together the processor initialization with a menu interface that triggers the individual sensor drivers based on commands entered at the menu, or loads the robot to control an inverted pendulum depending on the macros used. In any mode, after initialisation the LED will light up to say that the robot is ready.
 
 ##### `warp-kl03-ksdk1.1-powermodes.c`
 Implements functionality related to enabling the different low-power modes of the KL03.
