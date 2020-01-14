@@ -8,8 +8,6 @@
 #include "devMPU6050.h"
 #include "SEGGER_RTT.h"
 
-// #define PRINT_F
-
 extern volatile WarpI2CDeviceState	deviceMMA8451QState;
 
 int8_t pid_op(controller_t * settings)
@@ -42,6 +40,7 @@ void collect_readings(controller_t * settings)
 {
     uint16_t	readSensorRegisterValueLSB;
     uint16_t	readSensorRegisterValueMSB;
+    int16_t     accel[2];
     WarpStatus	i2cReadStatus;
     WarpSensorOutputRegister MSBaddress[] = {kWarpSensorOutputRegisterMMA8451QOUT_X_MSB, kWarpSensorOutputRegisterMMA8451QOUT_Z_MSB};
 
@@ -56,12 +55,12 @@ void collect_readings(controller_t * settings)
 
         readSensorRegisterValueMSB = deviceMMA8451QState.i2cBuffer[0];
         readSensorRegisterValueLSB = deviceMMA8451QState.i2cBuffer[1];
-        settings->accel[i] = ((readSensorRegisterValueMSB & 0xFF) << 6) | (readSensorRegisterValueLSB >> 2);
+        accel[i] = ((readSensorRegisterValueMSB & 0xFF) << 6) | (readSensorRegisterValueLSB >> 2);
 
         // Sign extend the 14-bit value based on knowledge that upper 2 bit are 0:
-        settings->accel[i] = (settings->accel[i] ^ (1 << 13)) - (1 << 13);
+        accel[i] = (accel[i] ^ (1 << 13)) - (1 << 13);
     }
-    settings->real = (float)atan2((float)settings->accel[1],(float)settings->accel[0]);
+    settings->real = (float)atan2((float)accel[1],(float)accel[0]);
 }
 
 long map(long x, long in_min, long in_max, long out_min, long out_max) {
@@ -89,8 +88,8 @@ void calculate_angle(int16_t accx, int16_t accz, int16_t gyroy, controller_t *pi
     pid_settings->real = 0.99*(pid_settings->real + gyroAngle) + 0.01*(accAngle);
 #ifdef PRINT_F
     rotAngle += gyroAngle;
-    SEGGER_RTT_printf(0, "%d,", (int)(accAngle*100.0));
-    SEGGER_RTT_printf(0, "%d,", (int)(rotAngle*100.0));
-    SEGGER_RTT_printf(0, "%d\n", (int)(pid_settings->real*100.0));
+    SEGGER_RTT_printf(0, "%d,", (int)(accAngle));
+    SEGGER_RTT_printf(0, "%d,", (int)(rotAngle));
+    SEGGER_RTT_printf(0, "%d\n", (int)(pid_settings->real));
 #endif
 }
