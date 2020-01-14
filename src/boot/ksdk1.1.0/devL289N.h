@@ -11,22 +11,21 @@
 void enablePWMpins();
 
 /*
- * Sets the duty cycle for TPM<devtpm>_CH<chn> to level
- */
-void setDutyCycle(uint16_t level, bool devtpm, bool chn)
-
-/*
  * Ouputs a value -100 - 100 on both motors connected to the PWM pins.
  */
 void motorControl(int8_t level);
 
 const lptmr_user_config_t lptmrConfig = {
-    .timerMode            = kLptmrTimerModeTimeCounter, /*! Use LPTMR in Time Counter mode */
-    .freeRunningEnable    = false, /*! When hit compare value, set counter back to zero */
-    .prescalerEnable      = false, /*! bypass prescaler */
-    .prescalerClockSource = kClockLptmrSrcLpoClk, /*! use 1kHz Low Power Clock */
-    .isInterruptEnabled   = true
+    .timerMode = kLptmrTimerModeTimeCounter,
+    .pinSelect = kLptmrPinSelectInput0,
+    .pinPolarity =kLptmrPinPolarityActiveHigh,
+    .freeRunningEnable = true,
+    .prescalerEnable = false,
+    .prescalerClockSource = kClockLptmrSrcLpoClk,
+    .prescalerValue = kLptmrPrescalerDivide2 ,
+    .isInterruptEnabled = false
 };
 
-lptmr_state_t lptmrState; // set when the timer is initialised
+volatile lptmr_state_t lptmrState; // set when the timer is initialised
+
 
