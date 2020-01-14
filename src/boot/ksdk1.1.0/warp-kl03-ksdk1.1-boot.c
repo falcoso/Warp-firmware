@@ -60,8 +60,8 @@
 #define WARP_FRDMKL03
 #define LOOP_READINGS
 
+// #include "devINA219.h"
 #ifndef LOOP_READINGS
-#include "devINA219.h"
 #include "devMMA8451Q.h"
 #endif
 
@@ -773,8 +773,10 @@ int main(void)
 
 	//	Initialize all the sensors
 #ifndef LOOP_READINGS
-	initINA219(0x40, &deviceINA219State);
 	initMMA8451Q(0x1D, &deviceMMA8451QState);
+#endif
+#ifdef WARP_BUILD_ENABLE_DEVINA219
+	initINA219(0x40, &deviceINA219State);
 #endif
 	initMPU6050(0x68, &deviceMPU6050State);
 
@@ -827,6 +829,9 @@ int main(void)
 #ifdef PRINT_F
 	SEGGER_RTT_WriteString(0, "Press any Key to Start\n");
 	SEGGER_RTT_WaitKey();
+#ifdef WARP_BUILD_ENABLE_DEVINA219
+	SEGGER_RTT_WriteString(0, "Curr,");
+#endif
 	SEGGER_RTT_WriteString(0, "Acc,Gyro,Real\n");
 #endif
 	pidSettings.real = configMPU6050(menuI2cPullupValue);
@@ -837,6 +842,9 @@ int main(void)
 
 		if(LPTMR_HAL_IsIntPending(g_lptmrBaseAddr[0]) == true)
 		{
+#ifdef WARP_BUILD_ENABLE_DEVINA219
+			SEGGER_RTT_printf(0, "%d,", getCurrentINA219());
+#endif
 			LPTMR_HAL_ClearIntFlag(g_lptmrBaseAddr[0]);
 			calculate_angle(x, z, y, (controller_t*)&pidSettings);
 			motorControl(pid_op( (controller_t*)&pidSettings ));
