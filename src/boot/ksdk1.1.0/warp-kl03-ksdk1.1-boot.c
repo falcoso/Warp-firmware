@@ -58,10 +58,9 @@
 #include "devSSD1331.h"
 
 #define WARP_FRDMKL03
-#define LOOP_READINGS
 
-// #include "devINA219.h"
 #ifndef LOOP_READINGS
+#include "devINA219.h"
 #include "devMMA8451Q.h"
 #endif
 
@@ -86,8 +85,6 @@ volatile WarpI2CDeviceState			deviceMPU6050State;
 volatile i2c_master_state_t			i2cMasterState;
 volatile spi_master_state_t			spiMasterState;
 volatile spi_master_user_config_t	spiUserConfig;
-// volatile lpuart_user_config_t 		lpuartUserConfig;
-// volatile lpuart_state_t 			lpuartState;
 
 
 volatile uint32_t			gWarpI2cBaudRateKbps		= 200;

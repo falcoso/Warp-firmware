@@ -1,21 +1,22 @@
 ## Overview
-This fork of the Warp Firmware repository modifies the original firmware to create a controller for an inverted pendulum system.
+This fork of the Warp Firmware repository modifies the original firmware to create a controller for an inverted pendulum system. The new repository can be found
+[here](https://github.com/falcoso/Warp-firmware).
 
 The core of the firmware is in `warp-kl03-ksdk1.1-boot.c`. The drivers for the individual sensors are in `devXXX.c` for sensor `XXX`. For example,
 `devMMA8451Q.c` for the MMA8451Q 3-axis accelerometer.
 
 ## Macros
 
-## `LOOP_READINGS`
-Defined in `warp-kl03-ksdk1.1-boot.c`, this macro compiles the firmware to start up in the inverted pendulum control loop.
+#### `LOOP_READINGS`
+Defined in `warp.h`, this macro compiles the firmware to start up in the inverted pendulum control loop.
 
-## `PRINT_F`
-Defined in `PID.h` if this is enabled along with `LOOP_READINGS`, after initialising the robot will wait for an input from the terminal. Once any key is pressed the robot will start the controller and output angle readings, and if the INA219 is connected, current readings as well, in `.csv` format.
+#### `PRINT_F`
+Defined in `warp.h` if this is enabled along with `LOOP_READINGS`, after initialising the robot will wait for an input from the terminal. Once any key is pressed the robot will start the controller and output angle readings, and if the INA219 is compiled in, current readings as well, in `.csv` format.
 
-## Not defining `LOOP_READINGS`
+#### Not defining `LOOP_READINGS`
 This will compile the robot in the original Warp Firmware menu with additional options to configure PWM. NOTE modifications to this were made in early stages of development so some menu options may present unexpected behavior and is only included for debugging purposes.
 
-## Source File Descriptions
+#### Source File Descriptions
 
 ##### `CMakeLists.txt`
 This is the CMake configuration file. Edit this to change the default size of the stack and heap.
